@@ -1,0 +1,43 @@
+# Copy to config/streamers.yaml (`clipfactory init` does it) and edit.
+# Only streamers listed here are ever downloaded, and only with permission: explicit.
+
+discovery:
+  lookback_hours: 48        # how far back to look for clips
+  min_views: 30             # ignore clips below this view count
+  game_name: Counter-Strike # Twitch category name for CS2
+  game_only: true           # skip clips from other categories (Just Chatting etc.)
+  max_pages: 3              # up to 100 clips per page, per streamer
+
+pipeline:
+  clips_per_run: 10         # how many top-ranked clips to process per `clipfactory run`
+
+transcribe:
+  backend: faster-whisper   # faster-whisper | mlx | none
+  model: small              # faster-whisper: small / medium / large-v3-turbo; mlx: turbo or an mlx-community/... repo
+  language: ru              # or "auto"
+
+render:
+  max_duration: 45          # seconds; longer clips keep the ending (where the moment usually is)
+  hook_seconds: 6           # how long the hook text stays on screen; 0 = whole video
+  hook_color: "#FFE600"
+  captions: false           # word-by-word subtitles above the split line
+  credit: true              # small "twitch.tv/<login>" credit on the video
+  font: assets/fonts/InterDisplay-Black.otf
+  encoder: libx264          # h264_videotoolbox is faster on a Mac
+  crf: 20
+  max_bitrate: 7M           # keeps 45 s files under Telegram's 50 MB bot limit
+  loudness_lufs: -14
+  fit_zoom: 1.0             # zoom for the "full" layout (no webcam)
+
+streamers:
+  - login: example_streamer           # Twitch login, lowercase
+    display_name: Example             # used as the hook speaker; optional
+    permission: explicit              # explicit | unknown | denied
+    permission_proof: permissions/example_streamer.png   # screenshot or link to the "ok"
+    permission_note: "Allowed clips in chat, 2026-10-19"
+    layout: auto                      # auto (split if webcam is set) | split | full
+    webcam: {x: 0.72, y: 0.70, w: 0.28, h: 0.30}         # webcam box, fractions of the frame
+    game_center_x: 0.5                # horizontal center of the game crop
+    # hook_speaker: Example           # override the name shown before the hook line
+    # language: ru
+    # weight: 1.0                     # ranking multiplier
