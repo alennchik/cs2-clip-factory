@@ -71,6 +71,8 @@ class RenderResult:
     start: float
     length: float
     layout: str
+    sponsor_at: float | None = None
+    sponsor_duration: float = 0.0
 
 
 def _double_rate(rate: str) -> str:
@@ -270,6 +272,9 @@ def render_video(
     chosen: Literal["split", "full"] = (
         "split" if layout == "split" and webcam is not None else "full"
     )
+    if cfg.sponsor.enabled and length >= cfg.sponsor.min_clip_seconds:
+        if not cfg.sponsor.asset.is_file():
+            raise RenderError(f"sponsor banner is missing: {cfg.sponsor.asset}")
     font_path = resolve_font(cfg.font)
     if work_dir is not None:
         work_dir.mkdir(parents=True, exist_ok=True)
@@ -342,7 +347,27 @@ def render_video(
             webcam_position=cfg.webcam_position,
         )
         run_render(job, ffmpeg_bin)
-    return RenderResult(out, round(s, 3), round(length, 3), chosen)
+        sponsor_at: float | None = None
+        sponsor_duration = 0.0
+        if cfg.sponsor.enabled and length >= cfg.sponsor.min_clip_seconds:
+            from clipfactory.media import MediaError
+            from clipfactory.sponsor import SponsorError, insert_sponsor
+
+            try:
+                inserted = insert_sponsor(
+                    out, cfg.sponsor.asset, ffmpeg_bin=ffmpeg_bin,
+                    ffprobe_bin=ffprobe_bin, encoder=cfg.encoder, crf=cfg.crf,
+                    max_bitrate=cfg.max_bitrate,
+                    min_clip_seconds=cfg.sponsor.min_clip_seconds,
+                )
+            except (SponsorError, MediaError, OSError, ValueError) as exc:
+                out.unlink(missing_ok=True)
+                raise RenderError(f"sponsor insertion failed: {exc}") from exc
+            if inserted is not None:
+                sponsor_at, sponsor_duration = inserted.at, inserted.duration
+    return RenderResult(
+        out, round(s, 3), round(length, 3), chosen, sponsor_at, sponsor_duration
+    )
 
 
 def make_preview(src: Path, dst: Path, ffmpeg_bin: str = "ffmpeg") -> Path:
