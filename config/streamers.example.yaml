@@ -1,5 +1,5 @@
 # Copy to config/streamers.yaml (`clipfactory init` does it) and edit.
-# Only streamers listed here are ever downloaded, and only with permission: explicit.
+# Only streamers listed here are ever downloaded.
 
 discovery:
   lookback_hours: 48        # how far back to look for clips
@@ -32,9 +32,8 @@ render:
 streamers:
   - login: example_streamer           # Twitch login, lowercase
     display_name: Example             # used as the hook speaker; optional
-    permission: explicit              # explicit | unknown | denied
-    permission_proof: permissions/example_streamer.png   # screenshot or link to the "ok"
-    permission_note: "Allowed clips in chat, 2026-10-19"
+    # permission: denied              # optional: unknown | denied pauses downloads for this streamer
+    # permission_note: "Allowed clipping on stream, 2026-10-19"   # optional, for your records
     layout: auto                      # auto (split if webcam is set) | split | full
     webcam: {x: 0.72, y: 0.70, w: 0.28, h: 0.30}         # webcam box, fractions of the frame
     game_center_x: 0.5                # horizontal center of the game crop
