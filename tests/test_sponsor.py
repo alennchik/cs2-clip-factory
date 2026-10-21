@@ -42,9 +42,10 @@ def test_missing_asset_is_rejected(tmp_path: Path):
 
 
 @needs_ffmpeg
-def test_inserts_webm_and_preserves_clip_length(tmp_path: Path):
+@pytest.mark.parametrize("extension,codec", [("mp4", "libx264"), ("webm", "libvpx-vp9")])
+def test_inserts_banner_and_preserves_clip_length(tmp_path: Path, extension: str, codec: str):
     source = tmp_path / "original.mp4"
-    banner = tmp_path / "first_banner.webm"
+    banner = tmp_path / f"banner.{extension}"
     subprocess.run(
         [
             "ffmpeg",
@@ -82,7 +83,7 @@ def test_inserts_webm_and_preserves_clip_length(tmp_path: Path):
             "-i",
             "color=c=yellow:s=360x180:r=30:d=1.2",
             "-c:v",
-            "libvpx-vp9",
+            codec,
             "-b:v",
             "400k",
             str(banner),
