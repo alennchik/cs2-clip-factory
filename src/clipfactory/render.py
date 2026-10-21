@@ -272,9 +272,12 @@ def render_video(
     chosen: Literal["split", "full"] = (
         "split" if layout == "split" and webcam is not None else "full"
     )
-    if cfg.sponsor.enabled and length >= cfg.sponsor.min_clip_seconds:
-        if not cfg.sponsor.asset.is_file():
-            raise RenderError(f"sponsor banner is missing: {cfg.sponsor.asset}")
+    if (
+        cfg.sponsor.enabled
+        and length >= cfg.sponsor.min_clip_seconds
+        and not cfg.sponsor.asset.is_file()
+    ):
+        raise RenderError(f"sponsor banner is missing: {cfg.sponsor.asset}")
     font_path = resolve_font(cfg.font)
     if work_dir is not None:
         work_dir.mkdir(parents=True, exist_ok=True)
