@@ -112,7 +112,7 @@ class SponsorConfig(BaseModel):
     """Optional local sponsor interlude (disabled by default)."""
 
     enabled: bool = False
-    asset: Path = Path("assets/sponsor/first_banner.webm")
+    asset: Path = Path("assets/sponsor/banner.mp4")
     min_clip_seconds: float = Field(12.0, ge=1, le=180)
 
 
