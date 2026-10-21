@@ -8,7 +8,6 @@ import re
 import subprocess
 import sys
 from dataclasses import dataclass
-from pathlib import Path
 
 from clipfactory.config import AppConfig
 from clipfactory.render import RenderError, resolve_font
@@ -144,23 +143,16 @@ def check_secrets(settings: Settings) -> list[Check]:
     ]
 
 
-def check_streamers(cfg: AppConfig, root: Path = Path(".")) -> list[Check]:
+def check_streamers(cfg: AppConfig) -> list[Check]:
     if not cfg.streamers:
         return [Check("streamers", "fail", "no streamers in config/streamers.yaml")]
     checks = []
     for s in cfg.streamers:
         notes: list[str] = []
         status = "ok"
-        proof = s.permission_proof.strip()
         if s.permission != "explicit":
             status = "warn"
-            notes.append(f"permission: {s.permission} — metadata only, never downloaded")
-        elif not proof:
-            status = "fail"
-            notes.append("permission_proof is empty — downloads are blocked")
-        elif not proof.startswith("http") and not (root / proof).exists():
-            status = "fail"
-            notes.append(f"proof file not found: {proof}")
+            notes.append(f"permission: {s.permission} — paused, clips are not downloaded")
         if s.webcam is None and s.layout != "full":
             status = "warn" if status == "ok" else status
             notes.append("no webcam box yet — full layout until you run calibrate")

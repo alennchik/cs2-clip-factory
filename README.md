@@ -7,7 +7,7 @@ normalized. Every video goes through a Telegram review before you post it yourse
 ```
 Twitch Helix (metadata only)
   └─ discover ─▶ SQLite: ranked clips
-       └─ select: whitelist + permission: explicit, skip duplicates / same moment
+       └─ select: listed streamers only, skip duplicates / same moment
             └─ fetch (yt-dlp) ─▶ transcribe (faster-whisper | mlx) ─▶ hooks ─▶ render (FFmpeg)
                  └─ Telegram: ✅ approve · ❌ reject · Хук 1/2/3 · ✏️ own hook
                       └─ out/ready/*.mp4 + caption .txt ─▶ you post in the TikTok app
@@ -56,9 +56,8 @@ Only an app access token is used: it reads clip metadata (Get Users, Get Games, 
 
 Edit `config/streamers.yaml`. For each streamer:
 
-- `permission: explicit` and `permission_proof:` — save a screenshot of their "ok" into
-  `permissions/<login>.png`. Without both, the clip is never downloaded. The `permissions/`
-  folder is git-ignored (it holds other people's messages), so keep a backup copy elsewhere.
+- `login` — only listed streamers are downloaded. Optional `permission_note` / `permission_proof`
+  are for your records; `permission: denied` pauses a streamer without deleting the block.
 - `webcam:` — the webcam box in fractions of the frame. After the first fetch run
   `clipfactory calibrate <login>`: it saves a frame with a 10% grid (and a suggested box with
   `pip install -e ".[vision]"`), then check it with `render-file ... --end 6`.
@@ -81,7 +80,7 @@ press **📤 Опубликовал**. **Хук 1/2/3** or **✏️** re-render 
 | `init` | Create `.env`, `config/streamers.yaml`, data folders, database |
 | `doctor` | Check ffmpeg, encoders, yt-dlp, font, speech-to-text, secrets, streamers |
 | `discover` | Fetch clip metadata for whitelisted streamers, rank, store |
-| `fetch [--limit N] [--clip ID]` | Download top clips (permission-gated) |
+| `fetch [--limit N] [--clip ID]` | Download top clips of listed streamers |
 | `transcribe` / `render` | Run single steps; `render --clip ID --hook "..." --start --end` |
 | `run [--limit N] [--no-discover] [--no-review]` | Whole pipeline |
 | `review send` / `review run` / `review chat-id` | Telegram review queue |
@@ -104,11 +103,11 @@ press **📤 Опубликовал**. **Хук 1/2/3** or **✏️** re-render 
 
 `data/` (git-ignored): `clipfactory.sqlite3`, `raw/` downloads, `transcripts/`, `renders/`.
 `out/ready/` holds approved videos with their captions. Every step writes an audit event
-(`events` table), including which permission proof each download relied on.
+(`events` table).
 
 ## Scope
 
-v0.1 covers discovery, permission-gated download, transcription, hooks, rendering and human
+v0.1 covers discovery, download, transcription, hooks, rendering and human
 review. Posting stays manual in the TikTok app. Not included: sponsor or ad insertion,
 auto-posting, multi-account management, paid APIs. Next steps: [docs/ROADMAP.md](docs/ROADMAP.md).
 

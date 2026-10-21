@@ -182,7 +182,7 @@ def _rows(state: State, clip_id: str | None, statuses: list[ClipStatus], limit: 
 @click.option("--clip", "clip_id", default=None, help="Fetch one clip by id.")
 @pass_state
 def fetch_command(state: State, limit: int | None, clip_id: str | None) -> None:
-    """Download top clips — only for streamers with permission: explicit."""
+    """Download top clips of the streamers listed in config/streamers.yaml."""
     from clipfactory.fetch import fetch_clip, ytdlp_downloader
     from clipfactory.pipeline import select_candidates
 

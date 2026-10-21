@@ -19,7 +19,7 @@ Talk to the owner (Alen) in Russian; code, identifiers, commits and docs in Engl
 | `config.py` | `config/streamers.yaml` models (whitelist, permission, webcam box, knobs) |
 | `db.py` | SQLite schema and helpers; `models.py` has the state enums |
 | `twitch.py`, `discover.py`, `ranking.py` | Helix metadata, ranking heuristic |
-| `fetch.py` | permission-gated download (yt-dlp), checksum, duplicate check |
+| `fetch.py` | download of listed streamers (yt-dlp), checksum, duplicate check |
 | `transcribe.py`, `hooks.py` | speech-to-text backends, hook heuristics |
 | `layout.py`, `textcard.py`, `render.py` | pure geometry, Pillow text layers, FFmpeg command |
 | `review.py`, `telegram.py` | Telegram review bot (owner-only) |
@@ -28,8 +28,8 @@ Talk to the owner (Alen) in Russian; code, identifiers, commits and docs in Engl
 
 ## Rules
 
-- Media is downloaded only through `fetch.fetch_clip`, which requires `permission: explicit`
-  plus `permission_proof`. Keep that gate; record the proof on every download.
+- Media is downloaded only through `fetch.fetch_clip`, and only for streamers listed in
+  `config/streamers.yaml` (not marked `unknown`/`denied`). Keep that whitelist check.
 - Secrets live only in `.env`. Never log or print tokens; keep the `httpx` logger at WARNING
   (Telegram API URLs contain the bot token). Never commit `.env` or `permissions/`.
 - Steps stay idempotent: status changes go through `db` helpers, every step logs `db.log_event`.

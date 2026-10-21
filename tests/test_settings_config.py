@@ -65,10 +65,10 @@ def test_split_layout_requires_webcam():
         StreamerConfig(login="abc", layout="split")
 
 
-def test_permission_needs_explicit_and_proof():
-    assert not StreamerConfig(login="abc", permission="explicit").can_fetch
-    assert not StreamerConfig(login="abc", permission="unknown", permission_proof="x.png").can_fetch
-    assert StreamerConfig(login="abc", permission="explicit", permission_proof="x.png").can_fetch
+def test_listed_streamer_can_be_fetched_unless_paused():
+    assert StreamerConfig(login="abc").can_fetch
+    assert not StreamerConfig(login="abc", permission="unknown").can_fetch
+    assert not StreamerConfig(login="abc", permission="denied").can_fetch
 
 
 def test_duplicate_logins_rejected():

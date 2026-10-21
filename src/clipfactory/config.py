@@ -48,7 +48,7 @@ class NormBox(BaseModel):
 class StreamerConfig(BaseModel):
     login: str
     display_name: str | None = None
-    permission: Permission = "unknown"
+    permission: Permission = "explicit"
     permission_proof: str = ""
     permission_note: str = ""
     layout: Literal["auto", "split", "full"] = "auto"
@@ -76,8 +76,8 @@ class StreamerConfig(BaseModel):
 
     @property
     def can_fetch(self) -> bool:
-        """Media may be downloaded only with explicit permission and a recorded proof."""
-        return self.permission == "explicit" and bool(self.permission_proof.strip())
+        """Listed streamers are downloaded unless marked `unknown` or `denied`."""
+        return self.permission == "explicit"
 
     @property
     def resolved_layout(self) -> LayoutName:

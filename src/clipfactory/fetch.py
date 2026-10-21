@@ -1,7 +1,7 @@
-"""Step 2: download clip media — only for streamers with explicit, recorded permission.
+"""Step 2: download clip media — only for streamers listed in config/streamers.yaml.
 
 Preferred official route (when you are the channel's editor): Helix "Get Clips Download".
-Until then clips are fetched with yt-dlp, and only for `permission: explicit` streamers.
+Until then clips are fetched with yt-dlp, only for listed streamers not marked unknown/denied.
 """
 
 from __future__ import annotations
@@ -80,7 +80,7 @@ def permission_problem(cfg: AppConfig, login: str) -> str | None:
     if streamer is None:
         return "streamer is not in config/streamers.yaml"
     if not streamer.can_fetch:
-        return f"permission is '{streamer.permission}' — need 'explicit' plus permission_proof"
+        return f"permission is '{streamer.permission}' in config/streamers.yaml"
     return None
 
 
