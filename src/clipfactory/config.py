@@ -108,6 +108,14 @@ class TranscribeConfig(BaseModel):
     language: str = "ru"
 
 
+class SponsorConfig(BaseModel):
+    """Optional local sponsor interlude (disabled by default)."""
+
+    enabled: bool = False
+    asset: Path = Path("assets/sponsor/banner.mp4")
+    min_clip_seconds: float = Field(12.0, ge=1, le=180)
+
+
 class RenderConfig(BaseModel):
     max_duration: float = Field(45.0, ge=5, le=180)
     hook_seconds: float = Field(6.0, ge=0)
@@ -122,6 +130,7 @@ class RenderConfig(BaseModel):
     fit_zoom: float = Field(1.0, ge=1.0, le=2.0)
     webcam_position: Literal["top", "bottom"] = "top"
     hook_position: Literal["middle", "top"] = "middle"
+    sponsor: SponsorConfig = Field(default_factory=SponsorConfig)
 
     @field_validator("hook_color")
     @classmethod

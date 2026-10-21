@@ -21,5 +21,10 @@ permissions/
 data/
 out/
 
+# Sponsor media stays local (do not commit downloaded ad binaries)
+assets/sponsor/*.webm
+assets/sponsor/*.mov
+assets/sponsor/*.mp4
+
 # macOS
 .DS_Store

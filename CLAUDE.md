@@ -40,7 +40,7 @@ Talk to the owner (Alen) in Russian; code, identifiers, commits and docs in Engl
 
 ## Out of scope for v0.1
 
-Sponsor or ad insertion, auto-posting, multi-account management, paid APIs.
+Auto-posting, multi-account management, paid APIs. Sponsor insertion is optional; see `src/clipfactory/sponsor.py` and `docs/SPONSOR_INSERTION.md`.
 
 ## Next work
 
