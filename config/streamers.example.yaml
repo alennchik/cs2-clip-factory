@@ -42,3 +42,4 @@ streamers:
     # hook_speaker: Example           # override the name shown before the hook line
     # language: ru
     # weight: 1.0                     # ranking multiplier
+    # webcam_check: false             # for avatars: skip the per-clip face check

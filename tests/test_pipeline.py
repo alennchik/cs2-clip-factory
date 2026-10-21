@@ -173,3 +173,36 @@ def test_status_counts(conn, status):
     db.upsert_clip(conn, clip_record())
     db.set_clip_status(conn, "Clip1", status, "why")
     assert db.status_counts(conn)["clips"] == {str(status): 1}
+
+
+@needs_ffmpeg
+@pytest.mark.parametrize(
+    ("face", "check", "expected"),
+    [
+        (False, True, "full"),  # streamer switched scenes: no face in the webcam box
+        (True, True, "split"),
+        (None, True, "split"),  # face detection not installed: trust the config
+        (False, False, "split"),  # webcam_check off (avatars)
+    ],
+)
+def test_webcam_check_falls_back_to_full_layout(
+    conn, settings, clip_12s, monkeypatch, face, check, expected
+):
+    import clipfactory.pipeline as pipeline
+
+    calls: list[tuple[int, int]] = []
+
+    def fake_face(image):
+        calls.append(image.size)
+        return face
+
+    monkeypatch.setattr(pipeline, "face_in_image", fake_face)
+    db.upsert_clip(conn, clip_record())
+    cfg = _config(webcam_check=check)
+    fetch_clip(conn, settings, cfg, db.get_clip(conn, "Clip1"), _copying_downloader(clip_12s, []))
+    render_id = pipeline.render_clip(conn, settings, cfg, db.get_clip(conn, "Clip1"))
+    assert db.get_render(conn, render_id)["layout"] == expected
+    if check:
+        assert calls and calls[0] == (536, 324)  # the webcam box crop of a 1920x1080 frame
+    else:
+        assert calls == []

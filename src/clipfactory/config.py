@@ -57,6 +57,9 @@ class StreamerConfig(BaseModel):
     hook_speaker: str | None = None
     language: str | None = None
     weight: float = Field(1.0, gt=0)
+    # Check each clip for a face in the webcam box; without one, use the full layout.
+    # Turn off for avatars (anime pictures, VTubers) that a face detector can't see.
+    webcam_check: bool = True
 
     @field_validator("login")
     @classmethod

@@ -9,6 +9,7 @@ import subprocess
 import sys
 from dataclasses import dataclass
 
+from clipfactory.calibrate import face_detection_available
 from clipfactory.config import AppConfig
 from clipfactory.render import RenderError, resolve_font
 from clipfactory.settings import Settings
@@ -153,6 +154,9 @@ def check_streamers(cfg: AppConfig) -> list[Check]:
         if s.permission != "explicit":
             status = "warn"
             notes.append(f"permission: {s.permission} — paused, clips are not downloaded")
+        if s.webcam is not None and s.webcam_check and not face_detection_available():
+            status = "warn" if status == "ok" else status
+            notes.append("webcam check is off: pip install -e '.[vision]'")
         if s.webcam is None and s.layout != "full":
             status = "warn" if status == "ok" else status
             notes.append("no webcam box yet — full layout until you run calibrate")

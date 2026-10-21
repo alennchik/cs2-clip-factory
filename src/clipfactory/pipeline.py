@@ -7,16 +7,21 @@ import logging
 import re
 import shutil
 import sqlite3
+import tempfile
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
+from PIL import Image
+
 from clipfactory import db, media
-from clipfactory.config import AppConfig
+from clipfactory.calibrate import face_in_image
+from clipfactory.config import AppConfig, NormBox
 from clipfactory.discover import ClipSource, DiscoverReport, discover
 from clipfactory.fetch import Downloader, fetch_clip, permission_problem, safe_name
 from clipfactory.hooks import HookCandidate, suggest_hooks
+from clipfactory.layout import norm_to_px
 from clipfactory.models import ClipStatus, RenderStatus
 from clipfactory.render import RenderError, render_video
 from clipfactory.settings import Settings
@@ -120,6 +125,30 @@ def hook_candidates_for(
 # --- render / re-render / export ---------------------------------------------------------
 
 
+def webcam_visible(
+    src: Path, box: NormBox, duration: float, settings: Settings, samples: int = 5
+) -> bool | None:
+    """Is there a face in the webcam box in any of a few frames? None = can't tell.
+
+    Streamers switch scenes (tournaments, no-cam segments); then the box shows the game.
+    """
+    if duration <= 0:
+        return None
+    settings.work_dir.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="camcheck-", dir=settings.work_dir) as tmp:
+        for i in range(samples):
+            at = duration * (i + 1) / (samples + 1)
+            png = media.extract_frame(src, at, Path(tmp) / f"{i}.png", settings.ffmpeg_bin)
+            with Image.open(png) as frame:
+                px = norm_to_px(box, frame.width, frame.height)
+                found = face_in_image(frame.crop((px.x, px.y, px.x + px.w, px.y + px.h)))
+            if found is None:
+                return None
+            if found:
+                return True
+    return False
+
+
 def render_clip(
     conn: sqlite3.Connection,
     settings: Settings,
@@ -147,12 +176,25 @@ def render_clip(
     if hook_text is None:
         hook_text = hook_options[0] if hook_options else ""
 
+    layout = streamer.resolved_layout if streamer else "full"
+    if layout == "split" and streamer.webcam_check and streamer.webcam is not None:
+        try:
+            visible = webcam_visible(
+                Path(m["path"]), streamer.webcam, float(m["duration"]), settings
+            )
+        except (media.MediaError, ValueError, OSError) as exc:
+            log.warning("webcam check failed for %s: %s", clip_id, exc)
+            visible = None
+        if visible is False:
+            layout = "full"
+            db.log_event(conn, "webcam_missing", clip_id=clip_id, detail="no face in webcam box")
+
     out = settings.renders_dir / f"{safe_name(clip_id)}_{uuid.uuid4().hex[:8]}.mp4"
     result = render_video(
         Path(m["path"]),
         out,
         cfg=cfg.render,
-        layout=streamer.resolved_layout if streamer else "full",
+        layout=layout,
         webcam=streamer.webcam if streamer else None,
         game_center_x=streamer.game_center_x if streamer else 0.5,
         hook_text=hook_text,
