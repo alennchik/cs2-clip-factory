@@ -46,25 +46,50 @@ def test_inserts_webm_and_preserves_clip_length(tmp_path: Path):
     banner = tmp_path / "first_banner.webm"
     subprocess.run(
         [
-            "ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i",
+            "ffmpeg",
+            "-v",
+            "error",
+            "-y",
+            "-f",
+            "lavfi",
+            "-i",
             "color=c=blue:s=1080x1920:r=30:d=3",
-            "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=48000:duration=3",
-            "-shortest", "-c:v", "libx264", "-preset", "ultrafast",
-            "-c:a", "aac", str(source),
+            "-f",
+            "lavfi",
+            "-i",
+            "sine=frequency=440:sample_rate=48000:duration=3",
+            "-shortest",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "ultrafast",
+            "-c:a",
+            "aac",
+            str(source),
         ],
-        check=True, capture_output=True,
+        check=True,
+        capture_output=True,
     )
     subprocess.run(
         [
-            "ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i",
+            "ffmpeg",
+            "-v",
+            "error",
+            "-y",
+            "-f",
+            "lavfi",
+            "-i",
             "color=c=yellow:s=360x180:r=30:d=1.2",
-            "-c:v", "libvpx-vp9", "-b:v", "400k", str(banner),
+            "-c:v",
+            "libvpx-vp9",
+            "-b:v",
+            "400k",
+            str(banner),
         ],
-        check=True, capture_output=True,
+        check=True,
+        capture_output=True,
     )
-    result = insert_sponsor(
-        source, banner, min_clip_seconds=2.0, crf=30, max_bitrate="2M"
-    )
+    result = insert_sponsor(source, banner, min_clip_seconds=2.0, crf=30, max_bitrate="2M")
     assert result is not None
     assert 1.0 < result.at < 2.0
     assert abs(result.duration - 1.2) < 0.1
