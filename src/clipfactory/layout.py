@@ -1,6 +1,7 @@
 """Pure geometry for the 9:16 layouts. No I/O, fully unit-tested.
 
-split: game/broadcast on top (1080x1150), streamer webcam below (1080x770)
+split: streamer webcam (1080x770) and game/broadcast (1080x1150) stacked; the webcam is on
+       top by default (`webcam_position`), the boundary between them is the "seam"
 full:  blurred cover background + the whole frame fitted in the middle (no webcam)
 """
 
@@ -13,8 +14,9 @@ from clipfactory.config import NormBox
 
 OUT_W = 1080
 OUT_H = 1920
-TOP_H = 1150
-BOTTOM_H = OUT_H - TOP_H  # 770
+GAME_H = 1150
+CAM_H = OUT_H - GAME_H  # 770
+TOP_H, BOTTOM_H = GAME_H, CAM_H  # names from the game-on-top layout, kept for compatibility
 
 # Text placement (TikTok UI safe zones: tabs at the top, buttons on the right,
 # caption at the bottom; tall phones also crop ~9% off each side).
@@ -72,14 +74,14 @@ def norm_to_px(box: NormBox, src_w: int, src_h: int) -> Box:
 
 
 def webcam_box(src_w: int, src_h: int, cam: NormBox) -> Box:
-    """Crop of the webcam area trimmed to the bottom panel's aspect ratio."""
+    """Crop of the webcam area trimmed to the webcam panel's aspect ratio."""
     px = norm_to_px(cam, src_w, src_h)
-    inner = cover_box(px.w, px.h, OUT_W, BOTTOM_H)
+    inner = cover_box(px.w, px.h, OUT_W, CAM_H)
     return Box(px.x + inner.x, px.y + inner.y, inner.w, inner.h)
 
 
 def game_box(src_w: int, src_h: int, center_x: float = 0.5) -> Box:
-    return cover_box(src_w, src_h, OUT_W, TOP_H, center_x=center_x)
+    return cover_box(src_w, src_h, OUT_W, GAME_H, center_x=center_x)
 
 
 def fit_size(src_w: int, src_h: int, zoom: float = 1.0) -> tuple[int, int]:
@@ -96,16 +98,35 @@ def full_foreground_box(src_w: int, src_h: int, zoom: float = 1.0) -> Box:
     return Box((OUT_W - w) // 2, even_down((OUT_H - h) / 2), w, h)
 
 
-def credit_top(layout: str, src_w: int, src_h: int, zoom: float = 1.0) -> int:
+def seam_y(webcam_position: str = "top") -> int:
+    """Y of the boundary between the webcam and game panels."""
+    return CAM_H if webcam_position == "top" else GAME_H
+
+
+def hook_center_y(
+    layout: str, src_w: int, src_h: int, zoom: float = 1.0, webcam_position: str = "top"
+) -> int:
+    """Where a "middle" hook is centered: on the seam, or just above the fitted frame."""
     if layout == "split":
-        return TOP_H + 22
+        return seam_y(webcam_position)
+    fg = full_foreground_box(src_w, src_h, zoom)
+    return max(fg.y - 110, HOOK_TOP + 60)
+
+
+def credit_top(
+    layout: str, src_w: int, src_h: int, zoom: float = 1.0, webcam_position: str = "top"
+) -> int:
+    if layout == "split":
+        return seam_y(webcam_position) + 22
     fg = full_foreground_box(src_w, src_h, zoom)
     return fg.y + fg.h + 24
 
 
-def captions_top(layout: str, src_w: int, src_h: int, zoom: float = 1.0) -> int:
+def captions_top(
+    layout: str, src_w: int, src_h: int, zoom: float = 1.0, webcam_position: str = "top"
+) -> int:
     if layout == "split":
-        return TOP_H - 160
+        return seam_y(webcam_position) - 160
     fg = full_foreground_box(src_w, src_h, zoom)
     return fg.y + fg.h + 100
 

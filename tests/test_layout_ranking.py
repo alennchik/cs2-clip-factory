@@ -11,7 +11,9 @@ from clipfactory.layout import (
     cover_box,
     full_foreground_box,
     game_box,
+    hook_center_y,
     norm_to_px,
+    seam_y,
     webcam_box,
 )
 from clipfactory.ranking import score_clip
@@ -78,3 +80,11 @@ def test_score_prefers_fresh_clips_and_good_lengths():
     assert fresh > old
     assert fresh > short
     assert weighted == pytest.approx(fresh * 2, rel=1e-3)
+
+
+def test_seam_and_middle_hook_position():
+    assert seam_y("top") == 770 and seam_y("bottom") == 1150
+    assert hook_center_y("split", 1920, 1080) == 770
+    assert hook_center_y("split", 1920, 1080, webcam_position="bottom") == 1150
+    fg = full_foreground_box(1920, 1080)
+    assert hook_center_y("full", 1920, 1080) == fg.y - 110

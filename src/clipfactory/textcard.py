@@ -93,16 +93,23 @@ def render_text_layer(
     *,
     font_path: str,
     top: int = HOOK_TOP,
+    center_y: int | None = None,
     max_width: int = HOOK_MAX_W,
     style: TextStyle = HOOK_STYLE,
     align: str = "center",
     left: int = 40,
     canvas: tuple[int, int] = (OUT_W, OUT_H),
 ) -> Path:
-    """Full-frame transparent PNG with the text drawn at `top` (centered or left-aligned)."""
+    """Full-frame transparent PNG with the text drawn at `top` (centered or left-aligned).
+
+    With `center_y`, the text block is vertically centered on that line instead.
+    """
     font, lines, stroke = fit_text(text, font_path, max_width, style)
     ascent, descent = font.getmetrics()
     line_h = round((ascent + descent) * style.line_spacing)
+    if center_y is not None:
+        block_h = (len(lines) - 1) * line_h + ascent + descent
+        top = max(center_y - block_h // 2, 0)
     anchor = "ma" if align == "center" else "la"
     x = canvas[0] // 2 if align == "center" else left
 

@@ -120,6 +120,8 @@ class RenderConfig(BaseModel):
     max_bitrate: str = "7M"
     loudness_lufs: float = Field(-14.0, ge=-30, le=-8)
     fit_zoom: float = Field(1.0, ge=1.0, le=2.0)
+    webcam_position: Literal["top", "bottom"] = "top"
+    hook_position: Literal["middle", "top"] = "middle"
 
     @field_validator("hook_color")
     @classmethod
