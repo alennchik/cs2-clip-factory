@@ -182,7 +182,11 @@ def render_clip(
         clip_id=clip_id,
         render_id=render_id,
         detail=json.dumps(
-            {"layout": result.layout, "start": result.start, "length": result.length},
+            {
+                "layout": result.layout, "start": result.start,
+                "length": result.length, "sponsor_at": result.sponsor_at,
+                "sponsor_duration": result.sponsor_duration,
+            },
         ),
     )
     return render_id
