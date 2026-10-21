@@ -520,5 +520,69 @@ def cleanup(state: State, days: int, dry_run: bool) -> None:
         db.log_event(state.conn, "cleanup", detail=f"{days}d, {freed} bytes")
 
 
+@cli.group()
+def schedule() -> None:
+    """Autostart on macOS: bot always on, pipeline on a daily schedule."""
+
+
+def _scheduler():
+    from clipfactory.schedule import Scheduler
+
+    project = Path.cwd()
+    if not (project / "pyproject.toml").is_file():
+        raise click.ClickException("run this from the cs2-clip-factory folder")
+    return Scheduler(project=project)
+
+
+@schedule.command("install")
+@click.option(
+    "--at",
+    "times",
+    multiple=True,
+    default=("12:00", "20:00"),
+    show_default=True,
+    help="Daily run time, HH:MM (repeat for several runs).",
+)
+@click.option("--limit", type=int, default=3, show_default=True, help="Clips per run.")
+def schedule_install(times: tuple[str, ...], limit: int) -> None:
+    """Install (or update) both background jobs."""
+    from clipfactory.schedule import ScheduleError
+
+    try:
+        paths = _scheduler().install(times, limit)
+    except ScheduleError as exc:
+        raise _fail(exc) from exc
+    for path in paths:
+        click.echo(f"installed {path}")
+    click.echo(f"Bot is running in the background; clips are collected at {', '.join(times)}.")
+    click.echo("Logs: data/logs/bot.log and data/logs/run.log. Don't start `review run` by hand.")
+
+
+@schedule.command("status")
+def schedule_status() -> None:
+    """Show whether the background jobs are loaded."""
+    for label, state in _scheduler().status().items():
+        click.echo(f"{label}: {state}")
+
+
+@schedule.command("now")
+def schedule_now() -> None:
+    """Start the scheduled pipeline run right now (in the background)."""
+    from clipfactory.schedule import ScheduleError
+
+    try:
+        _scheduler().run_now()
+    except ScheduleError as exc:
+        raise _fail(exc) from exc
+    click.echo("Started. Follow it with: tail -f data/logs/run.log")
+
+
+@schedule.command("uninstall")
+def schedule_uninstall() -> None:
+    """Stop and remove both background jobs."""
+    removed = _scheduler().uninstall()
+    click.echo("removed: " + (", ".join(str(p) for p in removed) or "nothing was installed"))
+
+
 def main() -> None:
     cli(prog_name="clipfactory")

@@ -25,6 +25,7 @@ Talk to the owner (Alen) in Russian; code, identifiers, commits and docs in Engl
 | `review.py`, `telegram.py` | Telegram review bot (owner-only) |
 | `pipeline.py` | glue: select → fetch → transcribe → hooks → render → export |
 | `calibrate.py`, `doctor.py` | webcam calibration, environment checks |
+| `schedule.py` | macOS launchd autostart (bot keep-alive, daily runs) |
 
 ## Rules
 
