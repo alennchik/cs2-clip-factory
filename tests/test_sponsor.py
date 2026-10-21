@@ -17,6 +17,7 @@ from .conftest import needs_ffmpeg
 
 def test_sponsor_is_disabled_by_default():
     assert RenderConfig().sponsor.enabled is False
+    assert RenderConfig().sponsor.asset == Path("assets/sponsor/banner.mp4")
 
 
 def test_chooses_quiet_pause_inside_middle():
