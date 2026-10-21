@@ -1,4 +1,3 @@
-import time
 from dataclasses import replace
 
 import numpy as np
@@ -27,18 +26,16 @@ def _yellow(arr: np.ndarray) -> int:
 @needs_ffmpeg
 def test_split_render_layout_text_and_loudness(clip_12s, tmp_path):
     out = tmp_path / "split.mp4"
-    t0 = time.monotonic()
     result = render_video(
         clip_12s, out, cfg=CFG, layout="split", webcam=CAM,
         hook_text="Electronic: я бы замашнил", credit_text="twitch.tv/streamer_a",
         work_dir=tmp_path / "work",
     )  # fmt: skip
-    elapsed = time.monotonic() - t0
     info = probe(out)
     assert (info.width, info.height) == (1080, 1920)
     assert (info.vcodec, info.acodec) == ("h264", "aac")
     assert abs(info.duration - 12.0) < 0.3
-    assert result.layout == "split" and elapsed < 60
+    assert result.layout == "split"  # speed is checked on the Mac, not on shared CI runners
 
     early = _frame(out, 2.0, tmp_path)
     late = _frame(out, 9.0, tmp_path)

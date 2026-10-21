@@ -57,7 +57,8 @@ Only an app access token is used: it reads clip metadata (Get Users, Get Games, 
 Edit `config/streamers.yaml`. For each streamer:
 
 - `permission: explicit` and `permission_proof:` — save a screenshot of their "ok" into
-  `permissions/<login>.png`. Without both, the clip is never downloaded.
+  `permissions/<login>.png`. Without both, the clip is never downloaded. The `permissions/`
+  folder is git-ignored (it holds other people's messages), so keep a backup copy elsewhere.
 - `webcam:` — the webcam box in fractions of the frame. After the first fetch run
   `clipfactory calibrate <login>`: it saves a frame with a 10% grid (and a suggested box with
   `pip install -e ".[vision]"`), then check it with `render-file ... --end 6`.

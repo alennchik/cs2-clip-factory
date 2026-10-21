@@ -31,7 +31,7 @@ Talk to the owner (Alen) in Russian; code, identifiers, commits and docs in Engl
 - Media is downloaded only through `fetch.fetch_clip`, which requires `permission: explicit`
   plus `permission_proof`. Keep that gate; record the proof on every download.
 - Secrets live only in `.env`. Never log or print tokens; keep the `httpx` logger at WARNING
-  (Telegram API URLs contain the bot token).
+  (Telegram API URLs contain the bot token). Never commit `.env` or `permissions/`.
 - Steps stay idempotent: status changes go through `db` helpers, every step logs `db.log_event`.
 - A human approves every video in Telegram; posting stays manual.
 - Pure logic gets unit tests; anything that shells out to ffmpeg gets an integration test.
