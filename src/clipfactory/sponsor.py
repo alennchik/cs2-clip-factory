@@ -53,9 +53,7 @@ def choose_insertion_time(
     for i in range(lo, hi + 1):
         local = envelope[max(0, i - half) : min(len(envelope), i + half + 1)]
         if len(local):
-            candidates.append(
-                (float(np.quantile(local, 0.75)), abs(i * window - target), i)
-            )
+            candidates.append((float(np.quantile(local, 0.75)), abs(i * window - target), i))
     best = min(candidates)[2] if candidates else round(target / window)
     return round(round((best * window) * fps) / fps, 3)
 
@@ -73,8 +71,16 @@ def _encode_args(encoder: str, crf: int, bitrate: str) -> list[str]:
     if encoder == "h264_videotoolbox":
         return ["-c:v", "h264_videotoolbox", "-b:v", bitrate]
     return [
-        "-c:v", "libx264", "-preset", "medium", "-crf", str(crf),
-        "-maxrate", bitrate, "-bufsize", bitrate,
+        "-c:v",
+        "libx264",
+        "-preset",
+        "medium",
+        "-crf",
+        str(crf),
+        "-maxrate",
+        bitrate,
+        "-bufsize",
+        bitrate,
     ]
 
 
@@ -123,8 +129,18 @@ def insert_sponsor(
         segment = tmp / "interlude.mp4"
 
         cmd = [
-            ffmpeg_bin, "-hide_banner", "-nostdin", "-y", "-loglevel", "error",
-            "-loop", "1", "-framerate", fps_text, "-i", str(still),
+            ffmpeg_bin,
+            "-hide_banner",
+            "-nostdin",
+            "-y",
+            "-loglevel",
+            "error",
+            "-loop",
+            "1",
+            "-framerate",
+            fps_text,
+            "-i",
+            str(still),
         ]
         # Explicit libvpx-vp9 decoding retains WebM alpha on supported FFmpeg builds.
         if banner.vcodec == "vp9":
@@ -132,7 +148,11 @@ def insert_sponsor(
         cmd += ["-i", str(asset)]
         if not banner.has_audio:
             cmd += [
-                "-f", "lavfi", "-t", f"{seconds:.3f}", "-i",
+                "-f",
+                "lavfi",
+                "-t",
+                f"{seconds:.3f}",
+                "-i",
                 "anullsrc=channel_layout=stereo:sample_rate=48000",
             ]
 
@@ -148,11 +168,28 @@ def insert_sponsor(
         )
         audio_input = "1:a" if banner.has_audio else "2:a"
         cmd += [
-            "-filter_complex", graph, "-map", "[v]", "-map", audio_input,
-            "-t", f"{seconds:.3f}", "-r", fps_text,
+            "-filter_complex",
+            graph,
+            "-map",
+            "[v]",
+            "-map",
+            audio_input,
+            "-t",
+            f"{seconds:.3f}",
+            "-r",
+            fps_text,
             *_encode_args(encoder, crf, max_bitrate),
-            "-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-ac", "2",
-            "-pix_fmt", "yuv420p", str(segment),
+            "-c:a",
+            "aac",
+            "-b:a",
+            "192k",
+            "-ar",
+            "48000",
+            "-ac",
+            "2",
+            "-pix_fmt",
+            "yuv420p",
+            str(segment),
         ]
         _run(cmd, "building sponsor segment")
 
@@ -170,11 +207,36 @@ def insert_sponsor(
         )
         combined = tmp / "combined.mp4"
         cmd = [
-            ffmpeg_bin, "-hide_banner", "-nostdin", "-y", "-loglevel", "error",
-            "-i", str(video), "-i", str(segment), "-filter_complex", graph,
-            "-map", "[v]", "-map", "[a]", *_encode_args(encoder, crf, max_bitrate),
-            "-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-ac", "2",
-            "-pix_fmt", "yuv420p", "-movflags", "+faststart", str(combined),
+            ffmpeg_bin,
+            "-hide_banner",
+            "-nostdin",
+            "-y",
+            "-loglevel",
+            "error",
+            "-i",
+            str(video),
+            "-i",
+            str(segment),
+            "-filter_complex",
+            graph,
+            "-map",
+            "[v]",
+            "-map",
+            "[a]",
+            *_encode_args(encoder, crf, max_bitrate),
+            "-c:a",
+            "aac",
+            "-b:a",
+            "192k",
+            "-ar",
+            "48000",
+            "-ac",
+            "2",
+            "-pix_fmt",
+            "yuv420p",
+            "-movflags",
+            "+faststart",
+            str(combined),
         ]
         _run(cmd, "combining original and sponsor")
         actual = media.probe(combined, ffprobe_bin).duration
