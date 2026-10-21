@@ -62,6 +62,7 @@ class RenderJob:
     max_bitrate: str = "7M"
     loudness_lufs: float = -14.0
     fit_zoom: float = 1.0
+    webcam_position: Literal["top", "bottom"] = "top"
 
 
 @dataclass(frozen=True)
@@ -88,9 +89,11 @@ def build_filtergraph(job: RenderJob) -> str:
         cam = L.webcam_box(p.width, p.height, job.webcam)
         parts += [
             "[0:v]split=2[game][cam]",
-            f"[game]{game.crop_filter()},scale={L.OUT_W}:{L.TOP_H}:flags=lanczos,setsar=1[top]",
-            f"[cam]{cam.crop_filter()},scale={L.OUT_W}:{L.BOTTOM_H}:flags=lanczos,setsar=1[bottom]",
-            "[top][bottom]vstack=inputs=2[base]",
+            f"[game]{game.crop_filter()},scale={L.OUT_W}:{L.GAME_H}:flags=lanczos,setsar=1[gp]",
+            f"[cam]{cam.crop_filter()},scale={L.OUT_W}:{L.CAM_H}:flags=lanczos,setsar=1[cp]",
+            "[cp][gp]vstack=inputs=2[base]"
+            if job.webcam_position == "top"
+            else "[gp][cp]vstack=inputs=2[base]",
         ]
     else:
         fit_w, fit_h = L.fit_size(p.width, p.height, job.fit_zoom)
@@ -274,19 +277,23 @@ def render_video(
     with tempfile.TemporaryDirectory(prefix="render-", dir=work_dir) as tmp_name:
         tmp = Path(tmp_name)
         overlays: list[Overlay] = []
+        geometry = (chosen, info.width, info.height, cfg.fit_zoom, cfg.webcam_position)
+        middle = cfg.hook_position == "middle"
+        hook_until: float | None = None
         if hook_text:
             png = render_text_layer(
                 hook_text,
                 tmp / "hook.png",
                 font_path=font_path,
+                center_y=L.hook_center_y(*geometry) if middle else None,
                 style=replace(HOOK_STYLE, fill=hex_to_rgb(cfg.hook_color)),
             )
-            until = (
+            hook_until = (
                 None if cfg.hook_seconds <= 0 or cfg.hook_seconds >= length else cfg.hook_seconds
             )
-            overlays.append(Overlay(png, 0.0, until))
+            overlays.append(Overlay(png, 0.0, hook_until))
         if cfg.captions and transcript is not None:
-            top = L.captions_top(chosen, info.width, info.height, cfg.fit_zoom)
+            top = L.captions_top(*geometry)
             for i, (text, t0, t1) in enumerate(caption_chunks(transcript, s, length)):
                 png = render_text_layer(
                     text,
@@ -297,17 +304,25 @@ def render_video(
                 )
                 overlays.append(Overlay(png, t0, t1))
         if credit_text:
+            # A middle hook sits on the seam where the credit goes: show the credit after it.
+            credit_from = 0.0
+            credit_y = L.credit_top(*geometry)
+            if hook_text and middle and chosen == "split":
+                if hook_until is not None:
+                    credit_from = hook_until
+                else:
+                    credit_y += 130
             png = render_text_layer(
                 credit_text,
                 tmp / "credit.png",
                 font_path=font_path,
-                top=L.credit_top(chosen, info.width, info.height, cfg.fit_zoom),
+                top=credit_y,
                 max_width=L.OUT_W - 80,
                 style=CREDIT_STYLE,
                 align="left",
                 left=36,
             )
-            overlays.append(Overlay(png))
+            overlays.append(Overlay(png, credit_from))
 
         job = RenderJob(
             src=src,
@@ -324,6 +339,7 @@ def render_video(
             max_bitrate=cfg.max_bitrate,
             loudness_lufs=cfg.loudness_lufs,
             fit_zoom=cfg.fit_zoom,
+            webcam_position=cfg.webcam_position,
         )
         run_render(job, ffmpeg_bin)
     return RenderResult(out, round(s, 3), round(length, 3), chosen)

@@ -93,11 +93,13 @@ press **📤 Опубликовал**. **Хук 1/2/3** or **✏️** re-render 
 
 - 1080×1920, H.264 + AAC 48 kHz, −14 LUFS, ≤ 45 s (longer clips keep the ending, shifted to
   include the hook line), ≤ 7 Mbit/s so files fit Telegram's 50 MB bot limit.
-- `split`: game 1080×1150 (center crop, `game_center_x`) over webcam 1080×770.
+- `split`: webcam 1080×770 over game 1080×1150 (center crop, `game_center_x`);
+  `webcam_position: bottom` swaps them.
   `full` (no webcam box): blurred background with the whole frame in the middle.
-- Hook: Inter Display Black, yellow `#FFE600`, black outline, top at y = 300, max width 840 —
-  clear of TikTok's tabs, side buttons and the side crop on tall phones. Shown for
-  `hook_seconds` (6 s). Optional word captions above the split line (`captions: true`).
+- Hook: Inter Display Black, yellow `#FFE600`, black outline, max width 840, centered on the
+  webcam/game boundary (`hook_position: middle`; `top` puts it at y = 300). Shown for
+  `hook_seconds` (6 s); the `twitch.tv/<login>` credit takes its place afterwards.
+  Optional word captions above the split line (`captions: true`).
 
 ## Data
 

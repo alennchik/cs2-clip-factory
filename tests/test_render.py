@@ -39,20 +39,33 @@ def test_split_render_layout_text_and_loudness(clip_12s, tmp_path):
 
     early = _frame(out, 2.0, tmp_path)
     late = _frame(out, 9.0, tmp_path)
-    # bottom panel = the orange webcam box
-    r, g, b = (int(v) for v in early[1600, 540])
+    # webcam panel on top (default): the orange webcam box
+    r, g, b = (int(v) for v in early[400, 540])
     assert r > 200 and 100 < g < 190 and b < 70
-    # top panel = dark-blue game feed with the white marker centered by the crop
-    r, g, b = (int(v) for v in early[900, 540])
+    # game panel below: dark-blue feed with the white marker centered by the crop
+    r, g, b = (int(v) for v in early[1750, 540])
     assert b > r and max(r, g, b) < 130
-    assert early[575, 540].min() > 220
-    # hook visible at the start, gone after hook_seconds (6 s)
-    assert _yellow(early[250:700]) > 2000
-    assert _yellow(late[250:700]) < 50
-    # credit text (white) stays on the top-left of the webcam panel
-    assert (late[1170:1215, 30:500].min(axis=2) > 220).sum() > 300
+    assert early[1345, 540].min() > 220
+    # hook sits on the seam (y = 770) at the start and is gone after hook_seconds (6 s)
+    assert _yellow(early[650:900]) > 2000
+    assert _yellow(late[650:900]) < 50
+    # the credit (white) takes the seam spot once the hook is gone
+    assert (late[792:840, 30:500].min(axis=2) > 220).sum() > 300
+    assert (early[792:840, 30:500].min(axis=2) > 220).sum() < 50
 
     assert abs(integrated_loudness(out) - CFG.loudness_lufs) < 2.0
+
+
+@needs_ffmpeg
+def test_webcam_bottom_and_hook_top_options(clip_12s, tmp_path):
+    cfg = CFG.model_copy(update={"webcam_position": "bottom", "hook_position": "top"})
+    out = tmp_path / "bottom.mp4"
+    render_video(clip_12s, out, cfg=cfg, layout="split", webcam=CAM, hook_text="тест", end=3.0)
+    frame = _frame(out, 1.0, tmp_path)
+    r, g, b = (int(v) for v in frame[1600, 540])
+    assert r > 200 and 100 < g < 190 and b < 70  # webcam below
+    assert frame[575, 540].min() > 220  # game marker in the top panel
+    assert _yellow(frame[250:500]) > 300  # hook near the top
 
 
 @needs_ffmpeg
@@ -92,7 +105,7 @@ def test_manual_trim_and_captions(clip_12s, tmp_path):
     )  # fmt: skip
     assert result.start == 4.0 and result.length == 6.0
     frame = _frame(result.path, 2.6, tmp_path)  # 6.6 s in the source: caption on screen
-    white = (frame[960:1110].min(axis=2) > 225).sum()
+    white = (frame[600:760].min(axis=2) > 225).sum()  # just above the seam
     assert white > 1500
 
 
