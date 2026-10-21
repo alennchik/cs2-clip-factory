@@ -64,7 +64,7 @@ Edit `config/streamers.yaml`. For each streamer:
 
 ## Optional sponsor integration
 
-You can enable a first-WebM-banner interlude in the final vertical MP4 before
+You can enable the first, ~6-second WebM banner interlude in the final vertical MP4 before
 Telegram review. This is disabled by default. See
 [the sponsor insertion guide](docs/SPONSOR_INSERTION.md) for setup and limitations.
 
