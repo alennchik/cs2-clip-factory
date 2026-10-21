@@ -358,8 +358,12 @@ def render_video(
 
             try:
                 inserted = insert_sponsor(
-                    out, cfg.sponsor.asset, ffmpeg_bin=ffmpeg_bin,
-                    ffprobe_bin=ffprobe_bin, encoder=cfg.encoder, crf=cfg.crf,
+                    out,
+                    cfg.sponsor.asset,
+                    ffmpeg_bin=ffmpeg_bin,
+                    ffprobe_bin=ffprobe_bin,
+                    encoder=cfg.encoder,
+                    crf=cfg.crf,
                     max_bitrate=cfg.max_bitrate,
                     min_clip_seconds=cfg.sponsor.min_clip_seconds,
                 )
@@ -368,9 +372,7 @@ def render_video(
                 raise RenderError(f"sponsor insertion failed: {exc}") from exc
             if inserted is not None:
                 sponsor_at, sponsor_duration = inserted.at, inserted.duration
-    return RenderResult(
-        out, round(s, 3), round(length, 3), chosen, sponsor_at, sponsor_duration
-    )
+    return RenderResult(out, round(s, 3), round(length, 3), chosen, sponsor_at, sponsor_duration)
 
 
 def make_preview(src: Path, dst: Path, ffmpeg_bin: str = "ffmpeg") -> Path:
