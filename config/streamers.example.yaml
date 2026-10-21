@@ -31,8 +31,8 @@ render:
   webcam_position: top      # top | bottom: where the webcam panel goes in the split layout
   hook_position: middle     # middle (on the webcam/game boundary) | top
   sponsor:
-    enabled: false         # set true after downloading the first WebM banner
-    asset: assets/sponsor/first_banner.webm
+    enabled: false         # set true after placing the local sponsor MP4
+    asset: assets/sponsor/banner.mp4
     min_clip_seconds: 12   # avoid disrupting short highlights
 
 streamers:
