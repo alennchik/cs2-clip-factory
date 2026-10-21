@@ -1,6 +1,6 @@
 # Optional sponsor interlude — first WebM banner
 
-An optional FFmpeg stage adds the **first** animated WebM banner to the already
+An optional FFmpeg stage adds the **first** animated WebM banner (~6.0 seconds) to the already
 rendered 1080×1920 CS2 clip, before the existing Telegram human-review step.
 No auto-posting or additional paid service is required. **Off by default.**
 
@@ -16,8 +16,11 @@ mkdir -p assets/sponsor
 # Move the downloaded WebM file into assets/sponsor/first_banner.webm.
 ```
 
-The binary is **not included in GitHub** because it could not be retrieved
-from Telegram. `.gitignore` excludes local promotional video assets.
+The original uploaded banner was verified as VP9 video (1902×1000, with alpha)
+and stereo Opus audio, with a measured length of 6.008 seconds. The binary
+is **not committed to GitHub**; `.gitignore` excludes local promotional media.
+Copy the downloaded original to the asset path on your Mac. No additional file
+conversion is necessary.
 
 ## 2. Enable the feature
 
@@ -47,7 +50,7 @@ ruff check . && ruff format --check .
 - Clips shorter than the threshold are left as-is.
 - On longer clips the module chooses a relatively quiet point around 35–60%
   of gameplay. This is an **audio heuristic**, not reliable AI scene detection.
-- During the break a dark blurred freeze-frame of the same clip appears behind
+- During the full ~6-second break a dark blurred freeze-frame of the same clip appears behind
   the original banner, with its full animation and sound (if present).
 - The full original gameplay and sound survive before and after the break.
 - An invalid or missing banner causes a rendering error rather than an
