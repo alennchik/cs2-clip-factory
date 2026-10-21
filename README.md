@@ -62,6 +62,12 @@ Edit `config/streamers.yaml`. For each streamer:
   `clipfactory calibrate <login>`: it saves a frame with a 10% grid (and a suggested box with
   `pip install -e ".[vision]"`), then check it with `render-file ... --end 6`.
 
+## Optional sponsor integration
+
+You can enable a first-WebM-banner interlude in the final vertical MP4 before
+Telegram review. This is disabled by default. See
+[the sponsor insertion guide](docs/SPONSOR_INSERTION.md) for setup and limitations.
+
 ## Autostart (macOS)
 
 ```bash
