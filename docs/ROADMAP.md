@@ -29,8 +29,7 @@ suggestions, 9:16 render (split / full), Telegram review, export with caption, C
 4. **Hook evaluation set** — 30 clips with the hook you would pick by hand
    (`tests/data/hooks_eval.yaml`); metric: top-3 hit rate; tune weights in `hooks.py`.
 5. **Review bot extras** — trim buttons (−2 s start / +2 s end), `/queue`, re-send button.
-6. **Schedule** — launchd job for `clipfactory run` once a day and a keep-alive for
-   `review run`; log files with rotation.
+6. ~~**Schedule**~~ — done: `clipfactory schedule install` (launchd). Log rotation still to do.
 7. **Analytics v0** — record TikTok results per posted video (views, average watch time,
    followers gained) by hand or from a TikTok Studio export; weekly report by streamer and
    hook type.

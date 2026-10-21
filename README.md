@@ -62,6 +62,18 @@ Edit `config/streamers.yaml`. For each streamer:
   `clipfactory calibrate <login>`: it saves a frame with a 10% grid (and a suggested box with
   `pip install -e ".[vision]"`), then check it with `render-file ... --end 6`.
 
+## Autostart (macOS)
+
+```bash
+clipfactory schedule install                  # bot always on + runs at 12:00 and 20:00, 3 clips each
+clipfactory schedule install --at 10:00 --limit 5   # change times / volume (re-run to update)
+clipfactory schedule status | now | uninstall
+```
+
+The bot then runs in the background (restarted at login and if it stops), and the pipeline runs
+on schedule; a run missed while the Mac was asleep starts when it wakes. Logs:
+`data/logs/bot.log`, `data/logs/run.log`. Don't start `review run` by hand while it's installed.
+
 ## Daily use
 
 ```bash
