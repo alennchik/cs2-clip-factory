@@ -26,7 +26,9 @@ class FakeTelegram:
         return [u for u in self.updates if u["update_id"] >= offset]
 
     def send_message(self, chat_id, text, reply_markup=None):
-        self.calls.append(("send_message", {"chat_id": chat_id, "text": text}))
+        self.calls.append(
+            ("send_message", {"chat_id": chat_id, "text": text, "markup": reply_markup})
+        )
         return self._msg()
 
     def send_video(self, chat_id, path, caption="", reply_markup=None, **kw):
@@ -197,3 +199,57 @@ def test_discover_chat_ids():
         updates=[{"update_id": 5, "message": {"chat": {"id": 42, "username": "alen"}}}]
     )
     assert discover_chat_ids(tg) == [(42, "alen")]
+
+
+def test_start_command_shows_persistent_create_button(bot):
+    bot.handle_update(say("/start"))
+    name, data = bot.tg.calls[-1]
+    assert name == "send_message"
+    assert "Создать ролик" in str(data["markup"])
+    assert data["markup"]["is_persistent"] is True
+
+
+@pytest.mark.parametrize("message", ["/new", "🎬 Создать ролик"])
+def test_manual_create_button_starts_one_clip(bot, message):
+    calls = []
+    bot.start_pipeline = lambda: calls.append("launch") or 4567
+    bot.handle_update(say(message))
+    assert calls == ["launch"]
+    assert "Запускаю создание одного ролика" in bot.tg.calls[-1][1]["text"]
+
+
+def test_manual_create_button_rejects_busy_run(bot):
+    from clipfactory.run_control import PipelineBusy
+
+    def busy():
+        raise PipelineBusy("already active")
+
+    bot.start_pipeline = busy
+    bot.handle_update(say("🎬 Создать ролик"))
+    assert "уже запущена" in bot.tg.calls[-1][1]["text"]
+
+
+def test_manual_create_rejects_stranger(bot):
+    calls = []
+    bot.start_pipeline = lambda: calls.append("launch") or 1
+    bot.handle_update(say("/new", user=123))
+    bot.handle_update(press("a:1", user=123))
+    assert calls == []
+    assert not any(n == "send_message" for n, _ in bot.tg.calls)
+
+
+def test_manual_create_reports_startup_error_without_secret(bot):
+    def fail():
+        raise RuntimeError("sensitive local details")
+
+    bot.start_pipeline = fail
+    bot.handle_update(say("/new"))
+    assert "Не удалось запустить" in bot.tg.calls[-1][1]["text"]
+    assert "sensitive local details" not in bot.tg.calls[-1][1]["text"]
+
+
+def test_queue_and_status_keyboard_buttons(bot):
+    bot.handle_update(say("📋 Очередь"))
+    assert bot.tg.names()[-1] == "send_video"
+    bot.handle_update(say("📊 Статус"))
+    assert "Ролики" in bot.tg.calls[-1][1]["text"]
