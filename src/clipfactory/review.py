@@ -23,8 +23,17 @@ HELP = (
     "❌ — отклонить.\n"
     "Хук 1/2/3 — перерисовать с другим вариантом хука.\n"
     "✏️ — прислать свой хук текстом (формат «Кто: фраза»).\n\n"
-    "/pending — прислать новые ролики, /status — статистика."
+    "/pending — прислать готовые ролики, /status — статистика.\n"
+    "/new — создать один новый ролик на Mac (если он включён)."
 )
+MAIN_MENU = {
+    "keyboard": [
+        [{"text": "🎬 Создать ролик"}],
+        [{"text": "📋 Очередь"}, {"text": "📊 Статус"}],
+    ],
+    "resize_keyboard": True,
+    "is_persistent": True,
+}
 ACTIONS = {"a", "r", "e", "h", "p"}
 OPEN = (RenderStatus.DRAFT, RenderStatus.SENT)
 
@@ -75,6 +84,7 @@ class ReviewBot:
     rerender: Callable[[int, str], int]
     export: Callable[[int], Path]
     pending_edit: dict[int, int] = field(default_factory=dict)
+    start_pipeline: Callable[[], int] | None = None
 
     @property
     def owner(self) -> int:
@@ -285,8 +295,8 @@ class ReviewBot:
     def _on_message(self, msg: dict[str, Any]) -> None:
         chat_id = (msg.get("chat") or {}).get("id")
         user_id = (msg.get("from") or {}).get("id")
-        if user_id != self.owner or chat_id is None:
-            log.info("ignored message from user %s", user_id)
+        if user_id != self.owner or chat_id != self.owner:
+            log.info("ignored message from user %s in chat %s", user_id, chat_id)
             return
         text = (msg.get("text") or "").strip()
         if not text:
@@ -294,16 +304,51 @@ class ReviewBot:
         if text.startswith("/"):
             self._command(int(chat_id), text.split()[0].split("@")[0])
             return
+        if text == "🎬 Создать ролик":
+            self._request_new_clip(int(chat_id))
+            return
+        if text == "📋 Очередь":
+            self._command(int(chat_id), "/pending")
+            return
+        if text == "📊 Статус":
+            self._command(int(chat_id), "/status")
+            return
         render_id = self.pending_edit.pop(int(chat_id), None)
         if render_id is None:
-            self.tg.send_message(chat_id, HELP)
+            self.tg.send_message(chat_id, HELP, MAIN_MENU)
             return
         hook = " ".join(text.split())[:80]
         self.tg.send_message(chat_id, f"Перерисовываю #{render_id} с новым хуком…")
         self._rerender_and_send(int(chat_id), render_id, hook)
 
+    def _request_new_clip(self, chat_id: int) -> None:
+        """Queue one local run without blocking the Telegram poll loop."""
+        from clipfactory.run_control import PipelineBusy
+
+        if self.start_pipeline is None:
+            self.tg.send_message(chat_id, "Ручной запуск пока не настроен.")
+            return
+        try:
+            self.start_pipeline()
+        except PipelineBusy:
+            self.tg.send_message(chat_id, "⏳ Обработка уже запущена. Новую пока не начинаю.")
+        except Exception:  # noqa: BLE001 - do not leak local file paths or secrets to Telegram
+            log.exception("could not start manual pipeline")
+            self.tg.send_message(chat_id, "❌ Не удалось запустить обработку. Проверь data/logs/bot.log.")
+        else:
+            self.tg.send_message(
+                chat_id,
+                "🎬 Запускаю создание одного ролика на Mac. "
+                "Когда он будет готов, пришлю сюда на проверку. "
+                "Если новых подходящих клипов нет, ролик не появится.",
+            )
+
     def _command(self, chat_id: int, command: str) -> None:
-        if command == "/pending":
+        if command in ("/start", "/help"):
+            self.tg.send_message(chat_id, HELP, MAIN_MENU)
+        elif command == "/new":
+            self._request_new_clip(chat_id)
+        elif command == "/pending":
             if self.send_pending() == 0:
                 self.tg.send_message(chat_id, "Новых роликов нет.")
         elif command == "/status":
@@ -312,7 +357,7 @@ class ReviewBot:
             renders = ", ".join(f"{k}: {v}" for k, v in sorted(counts["renders"].items())) or "—"
             self.tg.send_message(chat_id, f"Клипы — {clips}\nРолики — {renders}")
         else:
-            self.tg.send_message(chat_id, HELP)
+            self.tg.send_message(chat_id, HELP, MAIN_MENU)
 
     # --- loop --------------------------------------------------------------------------
 
