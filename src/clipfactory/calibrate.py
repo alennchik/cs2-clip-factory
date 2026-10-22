@@ -58,7 +58,8 @@ def box_around_face(
     return NormBox(x=x, y=y, w=w, h=h)
 
 
-def suggest_webcam_box(image: Image.Image) -> NormBox | None:
+def _face_cascade():
+    """(cv2, cascade) or None when OpenCV with Haar cascades isn't installed."""
     try:
         import cv2
     except ImportError:
@@ -67,7 +68,32 @@ def suggest_webcam_box(image: Image.Image) -> NormBox | None:
     data = getattr(cv2, "data", None)
     if cascade_cls is None or data is None:
         return None  # OpenCV 5 dropped Haar cascades; the vision extra pins <5
-    cascade = cascade_cls(data.haarcascades + "haarcascade_frontalface_default.xml")
+    return cv2, cascade_cls(data.haarcascades + "haarcascade_frontalface_default.xml")
+
+
+def face_detection_available() -> bool:
+    return _face_cascade() is not None
+
+
+def face_in_image(image: Image.Image) -> bool | None:
+    """True if a face is visible; None if face detection isn't installed."""
+    loaded = _face_cascade()
+    if loaded is None:
+        return None
+    cv2, cascade = loaded
+    img = image.convert("RGB")
+    if img.width < 500:  # small webcam crops: upscale so smaller faces are found
+        img = img.resize((img.width * 2, img.height * 2))
+    gray = cv2.cvtColor(np.asarray(img), cv2.COLOR_RGB2GRAY)
+    faces = cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(40, 40))
+    return len(faces) > 0
+
+
+def suggest_webcam_box(image: Image.Image) -> NormBox | None:
+    loaded = _face_cascade()
+    if loaded is None:
+        return None
+    cv2, cascade = loaded
     gray = cv2.cvtColor(np.asarray(image.convert("RGB")), cv2.COLOR_RGB2GRAY)
     w, h = image.size
     faces = cascade.detectMultiScale(
