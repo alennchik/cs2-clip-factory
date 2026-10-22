@@ -334,7 +334,9 @@ class ReviewBot:
             self.tg.send_message(chat_id, "⏳ Обработка уже запущена. Новую пока не начинаю.")
         except Exception:  # noqa: BLE001 - do not leak local file paths or secrets to Telegram
             log.exception("could not start manual pipeline")
-            self.tg.send_message(chat_id, "❌ Не удалось запустить обработку. Проверь data/logs/bot.log.")
+            self.tg.send_message(
+                chat_id, "❌ Не удалось запустить обработку. Проверь data/logs/bot.log."
+            )
         else:
             self.tg.send_message(
                 chat_id,
