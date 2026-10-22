@@ -80,6 +80,32 @@ The bot then runs in the background (restarted at login and if it stops), and th
 on schedule; a run missed while the Mac was asleep starts when it wakes. Logs:
 `data/logs/bot.log`, `data/logs/run.log`. Don't start `review run` by hand while it's installed.
 
+### Create one clip from Telegram (without disabling the schedule)
+
+After installing the scheduler, send **/start** to your Telegram bot to show its
+persistent **🎬 Создать ролик** button. Tap it (or send **/new**) to ask your
+**own Mac** to discover, download, transcribe, render and send up to **one new clip**
+for your normal Telegram approval flow. The command acknowledges immediately,
+while rendering continues in the background. **📋 Очередь** sends already
+rendered drafts, and **📊 Статус** shows the queue counts.
+
+Scheduled and button-triggered runs use the same cross-process file lock, so
+pressing the button repeatedly during a run reports that the pipeline is busy
+instead of starting duplicate jobs. Manual run output/errors are written to
+`data/logs/manual.log`. If no new eligible Twitch clips are available, no new
+video is delivered. The Mac must be awake, online and running the Telegram bot;
+no cloud worker or paid service is added. To verify setup:
+
+```bash
+clipfactory schedule status
+# If the two agents are not installed:
+clipfactory schedule install --at 12:00 --at 20:00 --limit 3
+# Then send /start in Telegram to show the buttons.
+```
+
+The local **`clipfactory run --limit 1`** command still works independently;
+it shares the same lock with scheduled and Telegram-requested jobs.
+
 ## Daily use
 
 ```bash

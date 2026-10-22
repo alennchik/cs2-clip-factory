@@ -265,12 +265,15 @@ def _bot(state: State):
     except TelegramError as exc:
         raise _fail(exc) from exc
     conn, cfg = state.conn, state.config
+    from clipfactory.run_control import start_pipeline
+
     return ReviewBot(
         conn,
         settings,
         tg,
         rerender=lambda render_id, hook: rerender(conn, settings, cfg, render_id, hook),
         export=lambda render_id: export_render(conn, settings, render_id),
+        start_pipeline=lambda: start_pipeline(settings.data_dir, Path.cwd(), limit=1),
     )
 
 
@@ -280,7 +283,18 @@ def _bot(state: State):
 @click.option("--no-review", is_flag=True, help="Don't send drafts to Telegram.")
 @pass_state
 def run_command(state: State, limit: int | None, no_discover: bool, no_review: bool) -> None:
-    """discover -> fetch -> transcribe -> render -> send to Telegram for review."""
+    """Discover, render and send clips; only one pipeline run can be active."""
+    from clipfactory.run_control import PipelineBusy, pipeline_lock
+
+    try:
+        with pipeline_lock(state.settings.data_dir):
+            _run_once(state, limit, no_discover, no_review)
+    except PipelineBusy as exc:
+        raise click.ClickException(str(exc)) from exc
+
+
+def _run_once(state: State, limit: int | None, no_discover: bool, no_review: bool) -> None:
+    """Execute a run while the caller holds the shared pipeline lock."""
     from clipfactory.fetch import ytdlp_downloader
     from clipfactory.pipeline import run_pipeline
     from clipfactory.transcribe import LazyTranscriber
