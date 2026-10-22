@@ -14,9 +14,8 @@ from clipfactory.run_control import LOCK_FD_ENV, PipelineBusy, pipeline_lock, st
 
 
 def test_two_runs_cannot_hold_pipeline_lock(tmp_path: Path):
-    with pipeline_lock(tmp_path), pytest.raises(PipelineBusy):
-        with pipeline_lock(tmp_path):
-            pytest.fail("second pipeline run should never start")
+    with pipeline_lock(tmp_path), pytest.raises(PipelineBusy), pipeline_lock(tmp_path):
+        pytest.fail("second pipeline run should never start")
     with pipeline_lock(tmp_path):
         pass  # releases cleanly after a finished run
 
