@@ -14,10 +14,9 @@ from clipfactory.run_control import LOCK_FD_ENV, PipelineBusy, pipeline_lock, st
 
 
 def test_two_runs_cannot_hold_pipeline_lock(tmp_path: Path):
-    with pipeline_lock(tmp_path):
-        with pytest.raises(PipelineBusy):
-            with pipeline_lock(tmp_path):
-                pytest.fail("second pipeline run should never start")
+    with pipeline_lock(tmp_path), pytest.raises(PipelineBusy):
+        with pipeline_lock(tmp_path):
+            pytest.fail("second pipeline run should never start")
     with pipeline_lock(tmp_path):
         pass  # releases cleanly after a finished run
 
@@ -44,9 +43,8 @@ def test_inherited_lock_survives_handoff(tmp_path: Path):
             check=False,
         )
         assert proc.returncode == 0, proc.stderr
-        with pytest.raises(PipelineBusy):
-            with pipeline_lock(tmp_path):
-                pass
+        with pytest.raises(PipelineBusy), pipeline_lock(tmp_path):
+            pass
 
 
 def test_launcher_passes_lock_to_background_child(tmp_path: Path, monkeypatch):
@@ -57,9 +55,8 @@ def test_launcher_passes_lock_to_background_child(tmp_path: Path, monkeypatch):
         assert kwargs["pass_fds"]
         assert kwargs["env"][LOCK_FD_ENV] == str(kwargs["pass_fds"][0])
         assert kwargs["start_new_session"] is True
-        with pytest.raises(PipelineBusy):
-            with pipeline_lock(tmp_path):
-                pass
+        with pytest.raises(PipelineBusy), pipeline_lock(tmp_path):
+            pass
         return SimpleNamespace(pid=12345)
 
     monkeypatch.setattr("clipfactory.run_control.subprocess.Popen", fake_popen)
@@ -77,6 +74,5 @@ def test_invalid_limit_and_inherited_descriptor(tmp_path: Path, monkeypatch):
     with pytest.raises(ValueError, match="limit"):
         start_pipeline(tmp_path, tmp_path, limit=0)
     monkeypatch.setenv(LOCK_FD_ENV, "not-an-fd")
-    with pytest.raises(RuntimeError, match="invalid inherited"):
-        with pipeline_lock(tmp_path):
-            pass
+    with pytest.raises(RuntimeError, match="invalid inherited"), pipeline_lock(tmp_path):
+        pass
