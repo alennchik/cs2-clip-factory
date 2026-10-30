@@ -455,6 +455,7 @@ def calibrate(
 @click.option(
     "--webcam", default=None, help="Webcam box x,y,w,h (fractions). Omit for full layout."
 )
+@click.option("--auto-webcam", is_flag=True, help="Detect a webcam across five frames.")
 @click.option("--hook", default="", help='On-screen line, e.g. "Electronic: я бы замашнил".')
 @click.option("--credit", default="", help='Credit line, e.g. "twitch.tv/streamer".')
 @click.option("--start", type=float, default=None)
@@ -466,6 +467,7 @@ def render_file(
     src: Path,
     out: Path | None,
     webcam: str | None,
+    auto_webcam: bool,
     hook: str,
     credit: str,
     start: float | None,
@@ -487,8 +489,8 @@ def render_file(
         result = render_video(
             src,
             out,
-            cfg=cfg.render,
-            layout="split" if box else "full",
+            cfg=cfg.render.model_copy(update={"auto_webcam": True}) if auto_webcam else cfg.render,
+            layout="split" if box or auto_webcam else "full",
             webcam=box,
             game_center_x=center_x,
             hook_text=hook,
