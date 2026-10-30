@@ -152,7 +152,11 @@ def render_clip(
         Path(m["path"]),
         out,
         cfg=cfg.render,
-        layout=streamer.resolved_layout if streamer else "full",
+        layout=(
+            "split"
+            if streamer and cfg.render.auto_webcam and streamer.layout != "full"
+            else (streamer.resolved_layout if streamer else "full")
+        ),
         webcam=streamer.webcam if streamer else None,
         game_center_x=streamer.game_center_x if streamer else 0.5,
         hook_text=hook_text,
