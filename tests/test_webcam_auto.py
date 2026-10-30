@@ -96,3 +96,17 @@ def test_render_uses_relocated_webcam_crop(clip_12s, tmp_path, monkeypatch):
         cfg=cfg, layout="split", webcam=HINT, end=2.0,
     )  # fmt: skip
     assert output.layout == "split"
+
+
+@needs_ffmpeg
+def test_render_auto_detects_webcam_without_an_existing_hint(clip_12s, tmp_path, monkeypatch):
+    def detected(*args, **kwargs):
+        return WebcamDetection(TOP_LEFT, 5, 5, "estimated_crop")
+
+    monkeypatch.setattr("clipfactory.webcam_auto.detect_webcam", detected)
+    cfg = RenderConfig(font=str(FONT), auto_webcam=True)
+    result = render_video(
+        clip_12s, tmp_path / "new_webcam.mp4",
+        cfg=cfg, layout="split", webcam=None, end=2.0,
+    )  # fmt: skip
+    assert result.layout == "split"
