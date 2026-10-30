@@ -84,9 +84,10 @@ render:
   auto_webcam: true
 ```
 
-Keep the **previously validated** `webcam: {x, y, w, h}` coordinates for each streamer.
-The detector reuses those dimensions when the camera moves, and leaves the YAML unchanged.
-A streamer's explicitly requested `layout: full` remains full.
+Keep the **previously validated** `webcam: {x, y, w, h}` coordinates where available.
+The detector reuses those dimensions when the camera moves. Streamers without a saved
+webcam can also be detected (with less reliable crop sizing). The YAML is never
+modified, and an explicitly requested `layout: full` remains full.
 
 Try a private local test before enabling it for the scheduler:
 
