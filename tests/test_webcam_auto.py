@@ -8,7 +8,6 @@ from clipfactory.webcam_auto import WebcamDetection, choose_webcam_box, detect_w
 
 from .conftest import FONT, needs_ffmpeg
 
-
 HINT = NormBox(x=0, y=0, w=0.24, h=0.235)
 TOP_LEFT = NormBox(x=0, y=0, w=0.2, h=0.21)
 TOP_RIGHT = NormBox(x=0.77, y=0.01, w=0.2, h=0.21)
