@@ -41,3 +41,17 @@ finish tests and focused fixes, and do not merge or deploy.
   not real Twitch validation. Linux detector median 1.294 s -> 1.022 s (3 runs each).
 - Independent worktree `audit/pipeline-recovery-20261030` fixes six reproduced queue
   regressions and three reproduced Telegram/review failures; full suite running.
+
+## GitHub checkpoints
+
+- PR #8: https://github.com/alennchik/cs2-clip-factory/pull/8 (into PR #7's branch).
+- Published webcam code commit: 86ab73fb3834ebec1c97a91370750adadea0f3f9.
+  Remote tree exactly matches local tested tree fb9a4b2a1a95b8261a85fdde0051811b0e50bf53.
+- CI 41062948784 completed successfully: dev 137 passed / 1 expected OpenCV skip;
+  dev+vision also green. No real Twitch-media validation implied.
+- Recovery branch final local result: 110 passed in 52.78 s; Ruff/format passed.
+  Published commit dcac6e9e0e27037f008c8a3d806f6977aaaae18e; remote tree matches tested
+  local tree 5d395790600866d7692d211970007b25e04c186c.
+- Moving one webcam warning test away from the end of test_review.py avoids an otherwise
+  trivial add/add conflict with the independent review regressions. No production change.
+- Remaining: verify recovery CI and combined-branch test run, record results, final Russian report.

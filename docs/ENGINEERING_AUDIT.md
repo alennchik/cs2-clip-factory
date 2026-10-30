@@ -52,6 +52,9 @@ Regression suites: `tests/test_webcam_safety.py`, `tests/test_webcam_integration
 Five new safety cases failed before patching (plus an independently reproduced median
 crash); six queue/recovery cases and three review/transport cases failed on main.
 
+A further recovery fix refreshes delayed VOD IDs/offsets in `db.upsert_clip` without
+resetting status. Previously an initial null offset stayed null across rediscovery.
+
 ## Production call chain
 
 `cli._run_once` holds the pipeline flock -> `discover` reads Helix metadata ->

@@ -116,6 +116,17 @@ def say(text: str, user: int = OWNER) -> dict:
     return {"update_id": 2, "message": {"chat": {"id": user}, "from": {"id": user}, "text": text}}
 
 
+def test_webcam_warning_is_visible_before_caption_truncation(bot, conn):
+    db.log_event(
+        conn,
+        "webcam_detection",
+        render_id=bot.rid,
+        detail='{"reason":"estimated_crop", "review_required":true}',
+    )
+    bot.send_pending()
+    assert bot.tg.calls[0][1]["caption"].startswith("⚠️ Автовебка:")
+
+
 def test_parse_callback():
     assert parse_callback("a:12") == ("a", 12, None)
     assert parse_callback("h:12:1") == ("h", 12, 1)
@@ -253,14 +264,3 @@ def test_queue_and_status_keyboard_buttons(bot):
     assert bot.tg.names()[-1] == "send_video"
     bot.handle_update(say("📊 Статус"))
     assert "Ролики" in bot.tg.calls[-1][1]["text"]
-
-
-def test_webcam_warning_is_visible_before_caption_truncation(bot, conn):
-    db.log_event(
-        conn,
-        "webcam_detection",
-        render_id=bot.rid,
-        detail='{"reason":"estimated_crop", "review_required":true}',
-    )
-    bot.send_pending()
-    assert bot.tg.calls[0][1]["caption"].startswith("⚠️ Автовебка:")
