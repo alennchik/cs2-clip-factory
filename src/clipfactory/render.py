@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import subprocess
 import tempfile
 from dataclasses import dataclass, field, replace
@@ -21,6 +22,8 @@ from clipfactory.textcard import (
     render_text_layer,
 )
 from clipfactory.transcribe import Transcript
+
+log = logging.getLogger(__name__)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 TELEGRAM_UPLOAD_LIMIT = 49 * 1024 * 1024
@@ -284,6 +287,28 @@ def render_video(
 
     with tempfile.TemporaryDirectory(prefix="render-", dir=work_dir) as tmp_name:
         tmp = Path(tmp_name)
+        if cfg.auto_webcam and layout == "split":
+            from clipfactory.webcam_auto import detect_webcam
+
+            detection = detect_webcam(
+                src,
+                start=s,
+                length=length,
+                hint=webcam,
+                ffmpeg_bin=ffmpeg_bin,
+                work_dir=tmp / "webcam_detection",
+            )
+            # Do not blindly use the historical crop when the camera moved or
+            # a face was not found. The full layout preserves the gameplay.
+            webcam = detection.box
+            chosen = "split" if webcam is not None else "full"
+            log.info(
+                "auto webcam: %s (%s/%s faces), layout=%s",
+                detection.reason,
+                detection.found,
+                detection.checked,
+                chosen,
+            )
         overlays: list[Overlay] = []
         geometry = (chosen, info.width, info.height, cfg.fit_zoom, cfg.webcam_position)
         middle = cfg.hook_position == "middle"
