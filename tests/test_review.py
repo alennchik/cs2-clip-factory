@@ -253,3 +253,14 @@ def test_queue_and_status_keyboard_buttons(bot):
     assert bot.tg.names()[-1] == "send_video"
     bot.handle_update(say("📊 Статус"))
     assert "Ролики" in bot.tg.calls[-1][1]["text"]
+
+
+def test_webcam_warning_is_visible_before_caption_truncation(bot, conn):
+    db.log_event(
+        conn,
+        "webcam_detection",
+        render_id=bot.rid,
+        detail='{"reason":"estimated_crop", "review_required":true}',
+    )
+    bot.send_pending()
+    assert bot.tg.calls[0][1]["caption"].startswith("⚠️ Автовебка:")

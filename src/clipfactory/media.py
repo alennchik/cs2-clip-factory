@@ -123,7 +123,13 @@ def audio_envelope_db(
 
 
 def extract_frame(
-    path: str | Path, at: float, out_png: str | Path, ffmpeg_bin: str = "ffmpeg"
+    path: str | Path,
+    at: float,
+    out_png: str | Path,
+    ffmpeg_bin: str = "ffmpeg",
+    *,
+    max_size: int | None = None,
+    timeout: float = 60,
 ) -> Path:
     out_png = Path(out_png)
     out_png.parent.mkdir(parents=True, exist_ok=True)
@@ -139,9 +145,17 @@ def extract_frame(
         str(path),
         "-frames:v",
         "1",
-        str(out_png),
     ]
-    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+    if max_size is not None:
+        if max_size < 2:
+            raise ValueError("max_size must be at least 2")
+        cmd += [
+            "-vf",
+            f"scale=w='min({max_size},iw)':h='min({max_size},ih)':"
+            "force_original_aspect_ratio=decrease",
+        ]
+    cmd.append(str(out_png))
+    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
     if proc.returncode != 0 or not out_png.is_file():
         raise MediaError(f"frame grab failed: {tail(proc.stderr, 3)}")
     return out_png

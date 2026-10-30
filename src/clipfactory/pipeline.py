@@ -180,6 +180,23 @@ def render_clip(
         path=str(result.path),
     )
     db.set_clip_status(conn, clip_id, ClipStatus.RENDERED)
+    if result.webcam_detection is not None:
+        detection = result.webcam_detection
+        db.log_event(
+            conn,
+            "webcam_detection",
+            clip_id=clip_id,
+            render_id=render_id,
+            detail=json.dumps(
+                {
+                    "reason": detection.reason,
+                    "found": detection.found,
+                    "checked": detection.checked,
+                    "box": detection.box.model_dump() if detection.box is not None else None,
+                    "review_required": True,
+                }
+            ),
+        )
     db.log_event(
         conn,
         "render",

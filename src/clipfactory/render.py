@@ -7,7 +7,7 @@ import subprocess
 import tempfile
 from dataclasses import dataclass, field, replace
 from pathlib import Path
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from clipfactory import layout as L
 from clipfactory.config import NormBox, RenderConfig
@@ -22,6 +22,9 @@ from clipfactory.textcard import (
     render_text_layer,
 )
 from clipfactory.transcribe import Transcript
+
+if TYPE_CHECKING:
+    from clipfactory.webcam_auto import WebcamDetection
 
 log = logging.getLogger(__name__)
 
@@ -76,6 +79,7 @@ class RenderResult:
     layout: str
     sponsor_at: float | None = None
     sponsor_duration: float = 0.0
+    webcam_detection: WebcamDetection | None = None
 
 
 def _double_rate(rate: str) -> str:
@@ -282,6 +286,8 @@ def render_video(
     ):
         raise RenderError(f"sponsor banner is missing: {cfg.sponsor.asset}")
     font_path = resolve_font(cfg.font)
+    detection = None
+    fit_zoom = cfg.fit_zoom
     if work_dir is not None:
         work_dir.mkdir(parents=True, exist_ok=True)
 
@@ -297,20 +303,24 @@ def render_video(
                 hint=webcam,
                 ffmpeg_bin=ffmpeg_bin,
                 work_dir=tmp / "webcam_detection",
+                source_size=(info.width, info.height),
             )
             # Do not blindly use the historical crop when the camera moved or
             # a face was not found. The full layout preserves the gameplay.
             webcam = detection.box
             chosen = "split" if webcam is not None else "full"
-            log.info(
-                "auto webcam: %s (%s/%s faces), layout=%s",
+            if chosen == "full":
+                # Preserve the whole frame even when normal full renders use zoom.
+                fit_zoom = 1.0
+            log.warning(
+                "auto webcam: %s (%s/%s samples), layout=%s; visual review required",
                 detection.reason,
                 detection.found,
                 detection.checked,
                 chosen,
             )
         overlays: list[Overlay] = []
-        geometry = (chosen, info.width, info.height, cfg.fit_zoom, cfg.webcam_position)
+        geometry = (chosen, info.width, info.height, fit_zoom, cfg.webcam_position)
         middle = cfg.hook_position == "middle"
         hook_until: float | None = None
         if hook_text:
@@ -371,7 +381,7 @@ def render_video(
             crf=cfg.crf,
             max_bitrate=cfg.max_bitrate,
             loudness_lufs=cfg.loudness_lufs,
-            fit_zoom=cfg.fit_zoom,
+            fit_zoom=fit_zoom,
             webcam_position=cfg.webcam_position,
         )
         run_render(job, ffmpeg_bin)
@@ -397,7 +407,9 @@ def render_video(
                 raise RenderError(f"sponsor insertion failed: {exc}") from exc
             if inserted is not None:
                 sponsor_at, sponsor_duration = inserted.at, inserted.duration
-    return RenderResult(out, round(s, 3), round(length, 3), chosen, sponsor_at, sponsor_duration)
+    return RenderResult(
+        out, round(s, 3), round(length, 3), chosen, sponsor_at, sponsor_duration, detection
+    )
 
 
 def make_preview(src: Path, dst: Path, ffmpeg_bin: str = "ffmpeg") -> Path:

@@ -375,6 +375,14 @@ def kv_get(conn: sqlite3.Connection, key: str) -> str | None:
     return None if row is None else str(row["value"])
 
 
+def latest_event_detail(conn: sqlite3.Connection, kind: str, render_id: int) -> str | None:
+    row = conn.execute(
+        "SELECT detail FROM events WHERE kind = ? AND render_id = ? ORDER BY id DESC LIMIT 1",
+        (kind, render_id),
+    ).fetchone()
+    return str(row["detail"]) if row else None
+
+
 def kv_set(conn: sqlite3.Connection, key: str, value: str) -> None:
     conn.execute(
         "INSERT INTO kv (key, value) VALUES (?, ?) "

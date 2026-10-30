@@ -17,13 +17,13 @@ def test_stable_detection_preserves_a_known_good_crop():
     result = choose_webcam_box([TOP_LEFT, TOP_LEFT, None, TOP_LEFT, TOP_LEFT], HINT)
     assert result.box == HINT
     assert result.found == 4
-    assert result.reason == "verified_existing_crop"
+    assert result.reason == "consistent_hint_estimate"
 
 
 def test_relocated_webcam_preserves_dimensions_but_moves_to_new_corner():
     result = choose_webcam_box([TOP_RIGHT] * 5, HINT)
     assert result.confident
-    assert result.reason == "relocated_existing_crop"
+    assert result.reason == "relocated_hint_estimate"
     assert result.box.w == HINT.w
     assert result.box.h == HINT.h
     assert 0.70 < result.box.x <= 0.76
@@ -53,19 +53,24 @@ def test_frame_detection_samples_across_selected_window(tmp_path, monkeypatch):
     Image.new("RGB", (128, 72), "grey").save(image_path)
     times = []
 
-    def fake_extract(path, at, out, ffmpeg_bin):
+    def fake_extract(path, at, out, ffmpeg_bin, **kwargs):
         times.append(at)
         return image_path
 
     monkeypatch.setattr("clipfactory.webcam_auto.extract_frame", fake_extract)
-    monkeypatch.setattr("clipfactory.webcam_auto.suggest_webcam_box", lambda image: TOP_RIGHT)
+
+    class Detector:
+        def detect(self, image):
+            return [NormBox(x=0.83, y=0.06, w=0.05, h=0.08)]
+
+    monkeypatch.setattr("clipfactory.webcam_auto.FaceDetector", Detector)
     result = detect_webcam(
         tmp_path / "source.mp4", start=5, length=20, hint=HINT,
         ffmpeg_bin="ffmpeg", work_dir=tmp_path / "frames",
     )  # fmt: skip
     assert result.confident
     assert len(times) == 5
-    assert times == [7.0, 11.0, 15.0, 19.0, 23.0]
+    assert times == [5.0, 10.0, 15.0, 20.0, 24.9]
 
 
 @needs_ffmpeg
@@ -84,10 +89,10 @@ def test_render_switches_to_full_when_detection_is_uncertain(clip_12s, tmp_path,
 
 @needs_ffmpeg
 def test_render_uses_relocated_webcam_crop(clip_12s, tmp_path, monkeypatch):
-    moved = NormBox(x=0.76, y=0.0, w=0.24, h=0.235)
+    moved = NormBox(x=0.72, y=0.70, w=0.28, h=0.30)
 
     def relocated(*args, **kwargs):
-        return WebcamDetection(moved, 5, 5, "relocated_existing_crop")
+        return WebcamDetection(moved, 5, 5, "relocated_hint_estimate")
 
     monkeypatch.setattr("clipfactory.webcam_auto.detect_webcam", relocated)
     cfg = RenderConfig(font=str(FONT), auto_webcam=True)
@@ -96,6 +101,11 @@ def test_render_uses_relocated_webcam_crop(clip_12s, tmp_path, monkeypatch):
         cfg=cfg, layout="split", webcam=HINT, end=2.0,
     )  # fmt: skip
     assert output.layout == "split"
+    from clipfactory.media import extract_frame
+
+    frame = Image.open(extract_frame(output.path, 1, tmp_path / "actual.png"))
+    r, g, b = frame.getpixel((540, 400))
+    assert r > 200 and 100 < g < 190 and b < 70  # actual moved orange panel, not old blue crop
 
 
 @needs_ffmpeg
