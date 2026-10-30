@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from contextlib import ExitStack
 from pathlib import Path
 from typing import Any
 
@@ -41,23 +42,30 @@ class TelegramClient:
     ) -> Any:
         data = {k: _form_value(v) for k, v in (params or {}).items() if v is not None}
         url = f"{self._base}/{method}"
-        if files:
-            handles = {
-                name: (path.name, path.open("rb"), mime) for name, (path, mime) in files.items()
-            }
-            try:
-                resp = self._http.post(url, data=data, files=handles)
-            finally:
-                for _, fh, _ in handles.values():
-                    fh.close()
-        else:
-            resp = self._http.post(url, data=data)
+        try:
+            with ExitStack() as stack:
+                handles = {
+                    name: (path.name, stack.enter_context(path.open("rb")), mime)
+                    for name, (path, mime) in (files or {}).items()
+                }
+                if files:
+                    resp = self._http.post(url, data=data, files=handles)
+                else:
+                    resp = self._http.post(url, data=data)
+        except httpx.HTTPError as exc:
+            # Transport errors may include the token-bearing URL. Suppress the
+            # original traceback too: the bot logs exception chains on failure.
+            raise TelegramError(f"{method}: transport error ({type(exc).__name__})") from None
         try:
             body = resp.json()
         except ValueError as exc:
             raise TelegramError(f"{method}: HTTP {resp.status_code}") from exc
-        if not body.get("ok"):
-            raise TelegramError(f"{method}: {body.get('description', resp.status_code)}")
+        if not isinstance(body, dict):
+            raise TelegramError(f"{method}: invalid response")
+        if not body.get("ok") or "result" not in body:
+            description = str(body.get("description", resp.status_code))
+            token = self._base.rsplit("/bot", 1)[-1]
+            raise TelegramError(f"{method}: {description.replace(token, '[REDACTED]')}")
         return body["result"]
 
     def get_updates(self, offset: int, timeout: int = 50) -> list[dict[str, Any]]:

@@ -145,6 +145,28 @@ press **📤 Опубликовал**. **Хук 1/2/3** or **✏️** re-render 
   `hook_seconds` (6 s); the `twitch.tv/<login>` credit takes its place afterwards.
   Optional word captions above the split line (`captions: true`).
 
+## Recovery and operational limits
+
+Interrupted `fetched` and `transcribed` clips are selected by the next `run`. A cached
+source is reused only if its size and SHA-256 match the recorded media; successful ASR
+is reused, and a corrupt transcript cache is regenerated. To deliberately rerun ASR
+with another model/language, use `clipfactory transcribe --clip CLIP_ID`.
+
+Failed jobs are not retried forever automatically. After fixing the cause, run
+`clipfactory fetch --clip CLIP_ID` and then `clipfactory run --no-discover --no-review --limit 1`
+to resume processing locally. A successful cached fetch restores a failed job to `fetched`.
+These commands still need the normal configuration and download permission gate.
+
+Overlap suppression uses intersecting source VOD intervals when metadata is available;
+unknown intervals still rely on file hashes. An unprocessed higher-ranked candidate
+only defers alternatives instead of discarding them before it succeeds. This policy
+is conservative about any shared source interval; it is not semantic moment deduplication.
+
+`permission: explicit` is the operator's download allowlist assertion, not independent
+verification of permission to redistribute or monetize clips. `permission_note` and
+`permission_proof` are record fields; the application does not authenticate them or
+determine their scope. Existing allowlist defaults are preserved.
+
 ## Data
 
 `data/` (git-ignored): `clipfactory.sqlite3`, `raw/` downloads, `transcripts/`, `renders/`.

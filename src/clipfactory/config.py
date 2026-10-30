@@ -76,7 +76,7 @@ class StreamerConfig(BaseModel):
 
     @property
     def can_fetch(self) -> bool:
-        """Listed streamers are downloaded unless marked `unknown` or `denied`."""
+        """Operator's download allowlist flag; not verification of redistribution rights."""
         return self.permission == "explicit"
 
     @property

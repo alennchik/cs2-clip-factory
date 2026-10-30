@@ -49,3 +49,23 @@ def test_non_json_response_raises():
 
     with pytest.raises(TelegramError, match="HTTP 502"):
         _client(handler).get_updates(0, timeout=0)
+
+
+def test_transport_failure_never_exposes_bot_token_in_exception_or_traceback():
+    import traceback
+
+    def handler(request):
+        raise httpx.ReadTimeout(f"request failed at {request.url}", request=request)
+
+    with pytest.raises(TelegramError) as caught:
+        _client(handler).send_message(1, "test")
+    assert "123:ABC" not in "".join(traceback.format_exception(caught.value))
+
+
+def test_server_error_description_redacts_echoed_token():
+    def handler(request):
+        return httpx.Response(400, json={"ok": False, "description": f"bad URL {request.url}"})
+
+    with pytest.raises(TelegramError) as caught:
+        _client(handler).send_message(1, "test")
+    assert "123:ABC" not in str(caught.value)
