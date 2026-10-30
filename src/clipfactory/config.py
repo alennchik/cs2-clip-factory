@@ -129,6 +129,7 @@ class RenderConfig(BaseModel):
     loudness_lufs: float = Field(-14.0, ge=-30, le=-8)
     fit_zoom: float = Field(1.0, ge=1.0, le=2.0)
     webcam_position: Literal["top", "bottom"] = "top"
+    auto_webcam: bool = False  # Opt-in: verify face position on each clip before using split.
     hook_position: Literal["middle", "top"] = "middle"
     sponsor: SponsorConfig = Field(default_factory=SponsorConfig)
 

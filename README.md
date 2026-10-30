@@ -62,6 +62,47 @@ Edit `config/streamers.yaml`. For each streamer:
   `clipfactory calibrate <login>`: it saves a frame with a 10% grid (and a suggested box with
   `pip install -e ".[vision]"`), then check it with `render-file ... --end 6`.
 
+## Automatic webcam detection (opt-in)
+
+Streamers sometimes move their webcam between broadcasts. When enabled, the render pipeline
+checks five frames from each **selected clip window** and only uses a split layout when
+OpenCV consistently finds a peripheral face in at least three frames. If the location is
+unstable, no face is found, or OpenCV is missing, it uses the **full** layout instead
+of blindly cropping the old webcam position.
+
+Install the optional face detector:
+
+```bash
+pip install -e ".[vision]"
+```
+
+Add the flag under the `render:` section of the local, git-ignored
+`config/streamers.yaml`:
+
+```yaml
+render:
+  auto_webcam: true
+```
+
+Keep the **previously validated** `webcam: {x, y, w, h}` coordinates where available.
+The detector reuses those dimensions when the camera moves. Streamers without a saved
+webcam can also be detected (with less reliable crop sizing). The YAML is never
+modified, and an explicitly requested `layout: full` remains full.
+
+Try a private local test before enabling it for the scheduler:
+
+```bash
+clipfactory render-file data/raw/keliencs_private_test.mp4 \
+  --webcam 0,0,0.24,0.235 --auto-webcam --end 6 \
+  --out out/test/keliencs_auto_webcam.mp4
+```
+
+Check the result visually. This is an **experimental face-based crop estimate**,
+not a trained webcam-boundary detector: it can fail when the streamer turns away,
+a game scene contains a face, a border moves, or a camera size changes. For these cases
+the safe fallback is full video, not a guessed crop. It also cannot follow a webcam
+that moves halfway through one clip.
+
 ## Optional sponsor integration
 
 You can enable a ~5.8-second MP4 sponsor interlude in the final vertical clip before
