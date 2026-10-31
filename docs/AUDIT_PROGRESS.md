@@ -72,6 +72,20 @@ finish tests and focused fixes, and do not merge or deploy.
 - This final checkpoint changes documentation only; the final PR head's CI is linked
   in the PR description after verification. No scheduled continuation has been created.
 
+## Final recovery follow-up
+
+- During final review, replacing a missing source with changed bytes incorrectly reused
+  old speech. Reproduced before fixing; regression checks changed and identical restores.
+- PR #9 follow-up 28808e33865720704fd3f39949b9e62eeffeb672 invalidates the transcript
+  reference before publishing changed media. No schema change or deletion of transcript
+  files. Local recovery suite: **112 passed in 55.75 s**; Ruff/format passed.
+- Combined suite with the follow-up: **157 passed in 63.65 s**, Ruff/format passed.
+  These supersede the earlier 110/155-test counts above.
+- PR #8 checkpoint 678b11fe899e51dfefc3682cbea640aebfc4187f passed
+  [CI 41219428140](https://github.com/alennchik/cs2-clip-factory/actions/runs/41219428140).
+  The next checkpoint updates these documents and clarifies CLI help text only.
+  Final head CI evidence for both PRs is maintained in their descriptions.
+
 One-message resume instruction:
 "Continue the CS2 Clip Factory audit from docs/AUDIT_PROGRESS.md on
 audit/webcam-safety-20261030 and draft PRs #8/#9. Verify current heads and CI, then

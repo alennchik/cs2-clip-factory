@@ -56,6 +56,9 @@ crash); six queue/recovery cases and three review/transport cases failed on main
 
 A further recovery fix refreshes delayed VOD IDs/offsets in `db.upsert_clip` without
 resetting status. Previously an initial null offset stayed null across rediscovery.
+Final review also reproduced stale ASR reuse after restoring a source with different
+bytes. `db.save_media` now invalidates the transcript reference when the source hash
+changes (before saving new media); identical restored media retains its transcript.
 
 ## Production call chain
 
@@ -103,9 +106,10 @@ Primary references (consulted 2026-10-30):
 Webcam branch: **138 passed in 69.18 s**, including FFmpeg integration, and Ruff passed
 in Linux x86_64 / Python 3.12.14 / OpenCV 4.14.0 / Ruff 0.16.10. CI now has dev-only
 and dev+vision jobs; missing OpenCV is also tested explicitly. Both jobs passed on GitHub.
-The recovery branch passed 110 tests locally and in GitHub CI. A temporary local
-combination of both branches merged without conflicts and passed **155 tests in 59.91 s**
-plus Ruff/format checks. No GitHub PR was merged. CI links, commits and detailed results
+The recovery branch initially passed 110 tests locally and in GitHub CI; after the
+changed-source ASR regression, it passed **112 locally in 55.75 s**. A temporary local
+combination of both branches and that final fix passed **157 tests in 63.65 s** plus
+Ruff/format checks. No GitHub PR was merged. CI links, commits and detailed results
 are recorded in `AUDIT_PROGRESS.md`.
 
 Timing experiment: five extractions + real Haar on a **3 s synthetic 1920x1080 clip

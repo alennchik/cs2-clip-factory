@@ -452,9 +452,7 @@ def calibrate(
 @cli.command("render-file")
 @click.argument("src", type=click.Path(exists=True, dir_okay=False, path_type=Path))
 @click.option("--out", type=click.Path(dir_okay=False, path_type=Path), default=None)
-@click.option(
-    "--webcam", default=None, help="Webcam box x,y,w,h (fractions). Omit for full layout."
-)
+@click.option("--webcam", default=None, help="Optional manual webcam box x,y,w,h (fractions).")
 @click.option(
     "--auto-webcam/--no-auto-webcam",
     default=None,
