@@ -8,6 +8,9 @@ Kept separate from PR #7's webcam feature.
 - Only discovered clips were eligible. Interrupted fetched/transcribed jobs now resume,
   reusing media after size + SHA-256 validation and successful cached ASR. Corrupt ASR
   cache is treated as absent. Explicit `transcribe --clip ID` still recomputes ASR.
+- Restoring a missing source may produce different media bytes. Successful ASR is reused
+  only while the recorded source hash remains the same; replacing it invalidates the
+  transcript reference before saving new media. Identical restored media keeps the ASR.
 - 55 higher-ranked disallowed clips hid the eligible clip behind a pre-filter SQL LIMIT.
   The allowlist is now applied inside the SQL query before LIMIT.
 - Fixed 30-second start-distance was not interval overlap. The selector now compares
@@ -28,10 +31,12 @@ Kept separate from PR #7's webcam feature.
 ## Validation
 
 Six new queue regressions and three review/transport regressions failed on the original
-implementation. Final local run: **110 passed in 52.78 s**, including real FFmpeg with
+implementation. Final local run: **112 passed in 55.75 s**, including real FFmpeg with
 synthetic media; Ruff and formatting passed. Additional tests cover corrupted source
 hashes, transcript recovery/cache reuse, delayed metadata, timeout isolation and safe
-state transitions. No live Twitch/Telegram calls or actual credentials used.
+state transitions. A further regression reproduced stale ASR after a changed-source
+restore; tests now cover both identical and changed restored content. No live
+Twitch/Telegram calls or actual credentials used. Published CI links are in PR #9.
 
 ## Limits
 

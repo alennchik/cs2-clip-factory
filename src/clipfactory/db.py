@@ -253,6 +253,11 @@ def save_media(conn: sqlite3.Connection, clip_id: str, **fields: Any) -> None:
     if missing:
         raise ValueError(f"missing media fields: {missing}")
     values = [fields[f] for f in MEDIA_FIELDS]
+    previous = get_media(conn, clip_id)
+    if previous is None or previous["sha256"] != fields["sha256"]:
+        # Invalidate before publishing changed media, so interruption cannot pair
+        # a new source with old speech. Keep the file; only the cache reference expires.
+        conn.execute("DELETE FROM transcripts WHERE clip_id = ?", (clip_id,))
     conn.execute(
         f"""
         INSERT OR REPLACE INTO media (clip_id, {", ".join(MEDIA_FIELDS)}, fetched_at)

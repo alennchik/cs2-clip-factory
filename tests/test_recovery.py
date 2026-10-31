@@ -238,3 +238,49 @@ def test_discovery_refreshes_delayed_vod_metadata_without_resetting_state(conn):
     db.upsert_clip(conn, clip_record(video_id="", vod_offset=None, duration=0))
     row = db.get_clip(conn, "Clip1")
     assert row["video_id"] == "vod" and row["vod_offset"] == 123 and row["duration"] == 30
+
+
+@pytest.mark.parametrize("changed", [False, True])
+def test_restored_media_only_reuses_transcript_when_content_matches(
+    conn, settings, monkeypatch, changed
+):
+    from clipfactory.media import Probe
+    from clipfactory.pipeline import load_transcript
+    from clipfactory.transcribe import Segment, Transcript
+
+    db.upsert_clip(conn, clip_record())
+    src = settings.raw_dir / "source.mp4"
+    old_bytes = b"old-video"
+    db.save_media(
+        conn, "Clip1", path=str(src), sha256=hashlib.sha256(old_bytes).hexdigest(),
+        bytes=len(old_bytes), width=640, height=360, fps=30, duration=12,
+        has_audio=1, method="test", permission_ref="",
+    )  # fmt: skip
+    old = Transcript(segments=[Segment(start=0, end=1, text="old speech")])
+    path = old.save(settings.transcripts_dir / "Clip1.json")
+    db.save_transcript(conn, "Clip1", str(path), "test", "", "ru")
+    db.set_clip_status(conn, "Clip1", ClipStatus.TRANSCRIBED)
+    calls = []
+
+    def download(*args):
+        src.write_bytes(b"new-video" if changed else old_bytes)
+        return src
+
+    class Transcriber:
+        def transcribe(self, *args):
+            calls.append(1)
+            return Transcript(segments=[Segment(start=0, end=1, text="new speech")])
+
+    monkeypatch.setattr(
+        "clipfactory.fetch.media.probe",
+        lambda *a: Probe(
+            width=640, height=360, fps=30, duration=12, has_audio=True, vcodec="h264", acodec="aac"
+        ),
+    )
+    monkeypatch.setattr("clipfactory.pipeline.render_clip", lambda *a: 1)
+    report = run_pipeline(
+        conn, settings, cfg(), downloader=download, transcriber=Transcriber(), limit=1
+    )
+    assert report.rendered == [1]
+    assert len(calls) == int(changed)
+    assert load_transcript(conn, "Clip1").text == ("new speech" if changed else "old speech")
