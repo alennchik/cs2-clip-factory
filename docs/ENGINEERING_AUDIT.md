@@ -23,8 +23,10 @@ Ruff check and format check passed. Green baseline tests did not detect the fail
 
 The two branches are independent:
 
-- `audit/webcam-safety-20261030`: based on PR #7; proposed into its feature branch.
-- `audit/pipeline-recovery-20261030`: based on main; operational fixes outside PR #7.
+- [PR #8](https://github.com/alennchik/cs2-clip-factory/pull/8),
+  `audit/webcam-safety-20261030`: based on PR #7; targets its feature branch.
+- [PR #9](https://github.com/alennchik/cs2-clip-factory/pull/9),
+  `audit/pipeline-recovery-20261030`: based on main; operational fixes outside PR #7.
 
 ## Findings and reproductions
 
@@ -100,8 +102,11 @@ Primary references (consulted 2026-10-30):
 
 Webcam branch: **138 passed in 69.18 s**, including FFmpeg integration, and Ruff passed
 in Linux x86_64 / Python 3.12.14 / OpenCV 4.14.0 / Ruff 0.16.10. CI now has dev-only
-and dev+vision jobs; missing OpenCV is also tested explicitly. Subsequent CI and
-combined-branch results are recorded in `AUDIT_PROGRESS.md`.
+and dev+vision jobs; missing OpenCV is also tested explicitly. Both jobs passed on GitHub.
+The recovery branch passed 110 tests locally and in GitHub CI. A temporary local
+combination of both branches merged without conflicts and passed **155 tests in 59.91 s**
+plus Ruff/format checks. No GitHub PR was merged. CI links, commits and detailed results
+are recorded in `AUDIT_PROGRESS.md`.
 
 Timing experiment: five extractions + real Haar on a **3 s synthetic 1920x1080 clip
 with no faces**, three sequential runs in each implementation. Original seconds:

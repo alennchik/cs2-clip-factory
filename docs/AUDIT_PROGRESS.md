@@ -14,14 +14,12 @@ Working branch: `audit/webcam-safety-20261030`. Never merge without owner approv
 - No real Twitch media or local Mac configuration is included in the repository. No real-video
   accuracy or M2 performance claim can be made from the synthetic FFmpeg fixtures.
 
-## Next
+## Remaining acceptance work
 
-1. Add regression tests and focused fixes for detection geometry, missing/ambiguous observations,
-   detector/extraction failures, final crop containment, fallback visibility and diagnostic records.
-2. Run baseline and revised pytest/Ruff including real FFmpeg execution on synthetic video.
-3. Address confirmed unrelated high-impact pipeline/review problems on a separate branch/PR.
-4. Publish audit report, exact rollout commands, known gaps and required private validation clips.
-5. Push feature branches, open draft PRs, inspect their actual CI results. Do not publish media.
+Code changes, regression tests, draft PRs and CI verification are complete. Automatic webcam
+accuracy remains unvalidated on real Twitch clips and on the owner's M2. Keep auto disabled
+by default; use the exact fixture list and local-only commands in ENGINEERING_AUDIT.md.
+Neither green CI nor the word "confident" proves that an estimated crop is the webcam panel.
 
 ## Resume
 
@@ -35,12 +33,12 @@ finish tests and focused fixes, and do not merge or deploy.
 - Added 4/5 + endpoints, ambiguity/size gates, actual final-crop face containment,
   valid-box medoid, precise relocation, detector failure fallback and bounded extraction.
 - Added DB diagnostics, Telegram warnings, explicit CLI disable, full-frame fallback at zoom=1.
-- CI matrix now covers dev and dev+vision. Awaiting new branch CI after push.
+- CI matrix now covers dev and dev+vision; both jobs passed after publication.
 - `docs/ENGINEERING_AUDIT.md` contains evidence, limitations, local commands and fixture list.
 - `docs/audit/fallback_comparison.png` is actual synthetic FFmpeg before/after output,
   not real Twitch validation. Linux detector median 1.294 s -> 1.022 s (3 runs each).
 - Independent worktree `audit/pipeline-recovery-20261030` fixes six reproduced queue
-  regressions and three reproduced Telegram/review failures; full suite running.
+  regressions and three reproduced Telegram/review failures; final full suite passed.
 
 ## GitHub checkpoints
 
@@ -54,4 +52,28 @@ finish tests and focused fixes, and do not merge or deploy.
   local tree 5d395790600866d7692d211970007b25e04c186c.
 - Moving one webcam warning test away from the end of test_review.py avoids an otherwise
   trivial add/add conflict with the independent review regressions. No production change.
-- Remaining: verify recovery CI and combined-branch test run, record results, final Russian report.
+
+## Final verification
+
+- PR #8 follow-up commit a875b394056b97e2d169a9c205ea87c09bc768db:
+  [CI 41063818003](https://github.com/alennchik/cs2-clip-factory/actions/runs/41063818003)
+  succeeded. Job logs confirm dev: 137 passed, 1 expected OpenCV skip in 63.66 s;
+  dev+vision: 138 passed in 52.98 s. Ruff and format checks passed in both jobs.
+- PR #9: https://github.com/alennchik/cs2-clip-factory/pull/9 (into main).
+  [CI 41063774218](https://github.com/alennchik/cs2-clip-factory/actions/runs/41063774218)
+  on dcac6e9e0e27037f008c8a3d806f6977aaaae18e succeeded; job logs confirm
+  110 passed in 45.88 s, plus Ruff and format checks.
+- A temporary local combination of both tested branches merges without conflicts:
+  **155 passed in 59.91 s**, Ruff and format checks passed (51 Python files).
+  This was an integration check in a detached worktree, not a GitHub/main merge.
+- GitHub metadata verified: PRs #7, #8 and #9 are open drafts and unmerged;
+  main is still 23f78936e413a0552788a5cd67466aa3fb27a66d, and PR #7 still has
+  head a3de08dff3b8bc1cbe3af8be266c70805eae5204.
+- This final checkpoint changes documentation only; the final PR head's CI is linked
+  in the PR description after verification. No scheduled continuation has been created.
+
+One-message resume instruction:
+"Continue the CS2 Clip Factory audit from docs/AUDIT_PROGRESS.md on
+audit/webcam-safety-20261030 and draft PRs #8/#9. Verify current heads and CI, then
+evaluate the supplied private clips against labelled webcam panel boundaries and
+measure M2 runtime/memory. Preserve manual mode; do not merge, deploy or publish."
