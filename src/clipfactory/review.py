@@ -179,7 +179,9 @@ class ReviewBot:
     def _on_callback(self, cb: dict[str, Any]) -> None:
         cb_id = str(cb.get("id", ""))
         user_id = (cb.get("from") or {}).get("id")
-        if user_id != self.owner:
+        message = cb.get("message") or {}
+        chat_id = (message.get("chat") or {}).get("id")
+        if user_id != self.owner or chat_id != self.owner:
             log.warning("ignored button press from user %s", user_id)
             self.tg.answer_callback(cb_id, "Нет доступа")
             return
@@ -192,8 +194,6 @@ class ReviewBot:
         if render is None:
             self.tg.answer_callback(cb_id, "Ролик не найден")
             return
-        message = cb.get("message") or {}
-        chat_id = int((message.get("chat") or {}).get("id", self.owner))
         message_id = message.get("message_id")
         status = RenderStatus(render["status"])
 
@@ -316,6 +316,10 @@ class ReviewBot:
         render_id = self.pending_edit.pop(int(chat_id), None)
         if render_id is None:
             self.tg.send_message(chat_id, HELP, MAIN_MENU)
+            return
+        render = db.get_render(self.conn, render_id)
+        if render is None or render["status"] not in OPEN:
+            self.tg.send_message(chat_id, "Эта версия уже неактуальна. Выбери новый ролик.")
             return
         hook = " ".join(text.split())[:80]
         self.tg.send_message(chat_id, f"Перерисовываю #{render_id} с новым хуком…")

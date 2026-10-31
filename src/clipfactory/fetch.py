@@ -101,6 +101,19 @@ def fetch_clip(
     streamer = cfg.streamer(clip["broadcaster_login"])
     assert streamer is not None
     try:
+        cached = db.get_media(conn, clip_id)
+        if cached is not None:
+            cached_path = Path(cached["path"])
+            if (
+                cached["bytes"] > 0
+                and cached_path.is_file()
+                and cached_path.stat().st_size == cached["bytes"]
+                and media.sha256_file(cached_path) == cached["sha256"]
+            ):
+                if clip["status"] in (ClipStatus.DISCOVERED, ClipStatus.FAILED):
+                    db.set_clip_status(conn, clip_id, ClipStatus.FETCHED)
+                db.log_event(conn, "fetch_cached", clip_id=clip_id)
+                return FetchOutcome(clip_id, ClipStatus.FETCHED, path=cached_path)
         path = downloader(clip["url"], settings.raw_dir, safe_name(clip_id))
         info = media.probe(path, settings.ffprobe_bin)
         if info.duration <= 0:

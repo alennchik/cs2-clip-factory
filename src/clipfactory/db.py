@@ -174,6 +174,11 @@ def upsert_clip(conn: sqlite3.Connection, clip: Mapping[str, Any]) -> bool:
             title = excluded.title,
             broadcaster_name = excluded.broadcaster_name,
             thumbnail_url = excluded.thumbnail_url,
+            video_id = CASE WHEN excluded.video_id != ''
+                            THEN excluded.video_id ELSE clips.video_id END,
+            vod_offset = COALESCE(excluded.vod_offset, clips.vod_offset),
+            duration = CASE WHEN excluded.duration > 0
+                            THEN excluded.duration ELSE clips.duration END,
             updated_at = excluded.updated_at
         """,
         (*values, now, now),
@@ -190,6 +195,7 @@ def list_clips(
     statuses: Sequence[str] | None = None,
     login: str | None = None,
     limit: int = 50,
+    logins: Sequence[str] | None = None,
 ) -> list[sqlite3.Row]:
     sql = "SELECT * FROM clips WHERE 1 = 1"
     params: list[Any] = []
@@ -199,6 +205,11 @@ def list_clips(
     if login:
         sql += " AND broadcaster_login = ?"
         params.append(login.lower())
+    if logins is not None:
+        if not logins:
+            return []
+        sql += f" AND broadcaster_login IN ({', '.join('?' for _ in logins)})"
+        params.extend(logins)
     sql += " ORDER BY score DESC, created_at DESC LIMIT ?"
     params.append(limit)
     return conn.execute(sql, params).fetchall()
@@ -213,17 +224,25 @@ def set_clip_status(
     )
 
 
-def processed_vod_spans(conn: sqlite3.Connection) -> list[tuple[str, int, str]]:
-    """(video_id, vod_offset, clip_id) for clips already in the pipeline, for overlap checks."""
+def processed_vod_spans(conn: sqlite3.Connection) -> list[tuple[str, float, float, str]]:
+    """(video_id, start, end, clip_id) for successfully rendered clips."""
     rows = conn.execute(
         """
-        SELECT video_id, vod_offset, clip_id FROM clips
+        SELECT video_id, vod_offset, duration, clip_id FROM clips
         WHERE video_id != '' AND vod_offset IS NOT NULL
-          AND status IN (?, ?, ?)
+          AND status = ?
         """,
-        (str(ClipStatus.FETCHED), str(ClipStatus.TRANSCRIBED), str(ClipStatus.RENDERED)),
+        (str(ClipStatus.RENDERED),),
     ).fetchall()
-    return [(r["video_id"], int(r["vod_offset"]), r["clip_id"]) for r in rows]
+    return [
+        (
+            r["video_id"],
+            float(r["vod_offset"]),
+            float(r["vod_offset"]) + float(r["duration"]),
+            r["clip_id"],
+        )
+        for r in rows
+    ]
 
 
 # --- media / transcripts -----------------------------------------------------------------
@@ -234,6 +253,11 @@ def save_media(conn: sqlite3.Connection, clip_id: str, **fields: Any) -> None:
     if missing:
         raise ValueError(f"missing media fields: {missing}")
     values = [fields[f] for f in MEDIA_FIELDS]
+    previous = get_media(conn, clip_id)
+    if previous is None or previous["sha256"] != fields["sha256"]:
+        # Invalidate before publishing changed media, so interruption cannot pair
+        # a new source with old speech. Keep the file; only the cache reference expires.
+        conn.execute("DELETE FROM transcripts WHERE clip_id = ?", (clip_id,))
     conn.execute(
         f"""
         INSERT OR REPLACE INTO media (clip_id, {", ".join(MEDIA_FIELDS)}, fetched_at)

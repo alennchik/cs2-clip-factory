@@ -96,7 +96,7 @@ def test_selection_skips_overlapping_clips_of_the_same_moment(conn):
     db.upsert_clip(conn, clip_record("D", score=99, login="no_permission"))
     chosen = select_candidates(conn, _config(), limit=5)
     assert [r["clip_id"] for r in chosen] == ["A", "C"]
-    assert db.get_clip(conn, "B")["status"] == ClipStatus.SKIPPED
+    assert db.get_clip(conn, "B")["status"] == ClipStatus.DISCOVERED  # A has not succeeded yet
     assert db.get_clip(conn, "D")["status"] == ClipStatus.DISCOVERED  # waits for permission
 
 

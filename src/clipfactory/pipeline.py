@@ -7,6 +7,7 @@ import logging
 import re
 import shutil
 import sqlite3
+import subprocess
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -24,8 +25,6 @@ from clipfactory.transcribe import Transcriber, Transcript, language_for
 
 log = logging.getLogger(__name__)
 
-OVERLAP_SECONDS = 30
-
 
 class PipelineError(RuntimeError):
     pass
@@ -34,33 +33,49 @@ class PipelineError(RuntimeError):
 # --- selection ---------------------------------------------------------------------------
 
 
-def find_overlap(clip: sqlite3.Row, spans: list[tuple[str, int, str]]) -> str | None:
+def find_overlap(clip: sqlite3.Row, spans: list[tuple[str, float, float, str]]) -> str | None:
     """Two clips of the same VOD moment (popular plays get clipped many times)."""
     if not clip["video_id"] or clip["vod_offset"] is None:
         return None
-    for video_id, offset, other_id in spans:
+    start = float(clip["vod_offset"])
+    end = start + float(clip["duration"])
+    for video_id, other_start, other_end, other_id in spans:
         if (
             video_id == clip["video_id"]
             and other_id != clip["clip_id"]
-            and abs(offset - int(clip["vod_offset"])) < OVERLAP_SECONDS
+            and min(end, other_end) > max(start, other_start)
         ):
             return other_id
     return None
 
 
 def select_candidates(conn: sqlite3.Connection, cfg: AppConfig, limit: int) -> list[sqlite3.Row]:
+    if limit < 1:
+        raise ValueError("limit must be positive")
     spans = db.processed_vod_spans(conn)
+    pending_spans: list[tuple[str, float, float, str]] = []
     chosen: list[sqlite3.Row] = []
-    for clip in db.list_clips(conn, statuses=[ClipStatus.DISCOVERED], limit=max(limit * 10, 50)):
+    for clip in db.list_clips(
+        conn,
+        statuses=[ClipStatus.DISCOVERED, ClipStatus.FETCHED, ClipStatus.TRANSCRIBED],
+        logins=[s.login for s in cfg.streamers if s.can_fetch],
+        limit=max(limit * 10, 50),
+    ):
         if permission_problem(cfg, clip["broadcaster_login"]):
             continue  # stays "discovered": picked up once permission is recorded
         other = find_overlap(clip, spans)
         if other:
             db.set_clip_status(conn, clip["clip_id"], ClipStatus.SKIPPED, f"overlaps clip {other}")
             continue
+        if find_overlap(clip, pending_spans):
+            # A higher-ranked candidate has not succeeded yet. Keep its alternatives retryable.
+            continue
         chosen.append(clip)
         if clip["video_id"] and clip["vod_offset"] is not None:
-            spans.append((clip["video_id"], int(clip["vod_offset"]), clip["clip_id"]))
+            start = float(clip["vod_offset"])
+            pending_spans.append(
+                (clip["video_id"], start, start + float(clip["duration"]), clip["clip_id"])
+            )
         if len(chosen) >= limit:
             break
     return chosen
@@ -73,7 +88,11 @@ def load_transcript(conn: sqlite3.Connection, clip_id: str) -> Transcript | None
     row = db.get_transcript(conn, clip_id)
     if row is None or not Path(row["path"]).is_file():
         return None
-    return Transcript.load(row["path"])
+    try:
+        return Transcript.load(row["path"])
+    except (OSError, ValueError):
+        log.warning("unreadable transcript cache for %s; treating as missing", clip_id)
+        return None
 
 
 def transcribe_clip(
@@ -258,13 +277,23 @@ def process_clip(
         return None
     clip = db.get_clip(conn, clip_id)
     try:
-        transcribe_clip(conn, settings, cfg, clip, transcriber)
+        if load_transcript(conn, clip_id) is None:
+            transcribe_clip(conn, settings, cfg, clip, transcriber)
+        else:
+            db.log_event(conn, "transcribe_cached", clip_id=clip_id)
     except Exception as exc:  # noqa: BLE001 - ASR failure must not block the render
         db.log_event(conn, "transcribe_failed", clip_id=clip_id, detail=str(exc))
         log.warning("transcription failed for %s (continuing with title hooks): %s", clip_id, exc)
     try:
         return render_clip(conn, settings, cfg, db.get_clip(conn, clip_id))
-    except (RenderError, media.MediaError, PipelineError, OSError) as exc:
+    except (
+        RenderError,
+        media.MediaError,
+        PipelineError,
+        OSError,
+        ValueError,
+        subprocess.TimeoutExpired,
+    ) as exc:
         db.set_clip_status(conn, clip_id, ClipStatus.FAILED, f"render: {exc}")
         db.log_event(conn, "render_failed", clip_id=clip_id, detail=str(exc))
         log.warning("render failed for %s: %s", clip_id, exc)

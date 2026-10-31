@@ -153,6 +153,10 @@ def check_streamers(cfg: AppConfig) -> list[Check]:
         if s.permission != "explicit":
             status = "warn"
             notes.append(f"permission: {s.permission} — paused, clips are not downloaded")
+        else:
+            notes.append(
+                "download enabled by local config; redistribution/monetization not verified"
+            )
         if s.webcam is None and s.layout != "full":
             status = "warn" if status == "ok" else status
             notes.append("no webcam box yet — full layout until you run calibrate")

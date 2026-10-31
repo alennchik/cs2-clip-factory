@@ -253,3 +253,19 @@ def test_queue_and_status_keyboard_buttons(bot):
     assert bot.tg.names()[-1] == "send_video"
     bot.handle_update(say("📊 Статус"))
     assert "Ролики" in bot.tg.calls[-1][1]["text"]
+
+
+def test_pending_edit_cannot_rerender_an_already_approved_version(bot, conn):
+    bot.handle_update(press(f"e:{bot.rid}"))
+    bot.handle_update(press(f"a:{bot.rid}"))
+    bot.handle_update(say("A: outdated edit"))
+    assert bot.rerenders == []
+    assert db.get_render(conn, bot.rid)["status"] == RenderStatus.APPROVED
+
+
+def test_callback_from_other_chat_cannot_export_media(bot, conn):
+    update = press(f"a:{bot.rid}")
+    update["callback_query"]["message"]["chat"]["id"] = -100123
+    bot.handle_update(update)
+    assert db.get_render(conn, bot.rid)["status"] == RenderStatus.DRAFT
+    assert "send_document" not in bot.tg.names()
