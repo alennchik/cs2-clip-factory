@@ -452,10 +452,12 @@ def calibrate(
 @cli.command("render-file")
 @click.argument("src", type=click.Path(exists=True, dir_okay=False, path_type=Path))
 @click.option("--out", type=click.Path(dir_okay=False, path_type=Path), default=None)
+@click.option("--webcam", default=None, help="Optional manual webcam box x,y,w,h (fractions).")
 @click.option(
-    "--webcam", default=None, help="Webcam box x,y,w,h (fractions). Omit for full layout."
+    "--auto-webcam/--no-auto-webcam",
+    default=None,
+    help="Estimate webcam across five frames; default follows render.auto_webcam.",
 )
-@click.option("--auto-webcam", is_flag=True, help="Detect a webcam across five frames.")
 @click.option("--hook", default="", help='On-screen line, e.g. "Electronic: я бы замашнил".')
 @click.option("--credit", default="", help='Credit line, e.g. "twitch.tv/streamer".')
 @click.option("--start", type=float, default=None)
@@ -467,7 +469,7 @@ def render_file(
     src: Path,
     out: Path | None,
     webcam: str | None,
-    auto_webcam: bool,
+    auto_webcam: bool | None,
     hook: str,
     credit: str,
     start: float | None,
@@ -479,6 +481,9 @@ def render_file(
 
     settings = state.settings
     cfg = state.config_or_default()
+    render_cfg = cfg.render
+    if auto_webcam is not None:
+        render_cfg = render_cfg.model_copy(update={"auto_webcam": auto_webcam})
     try:
         box = NormBox.parse(webcam) if webcam else None
     except ValueError as exc:
@@ -489,8 +494,8 @@ def render_file(
         result = render_video(
             src,
             out,
-            cfg=cfg.render.model_copy(update={"auto_webcam": True}) if auto_webcam else cfg.render,
-            layout="split" if box or auto_webcam else "full",
+            cfg=render_cfg,
+            layout="split" if box or render_cfg.auto_webcam else "full",
             webcam=box,
             game_center_x=center_x,
             hook_text=hook,

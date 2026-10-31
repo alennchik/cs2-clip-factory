@@ -85,9 +85,10 @@ def game_box(src_w: int, src_h: int, center_x: float = 0.5) -> Box:
 
 
 def fit_size(src_w: int, src_h: int, zoom: float = 1.0) -> tuple[int, int]:
-    """Foreground size for the full layout: frame width (times zoom), keeps aspect ratio."""
-    w = even_down(OUT_W * zoom)
-    h = even_down(w * src_h / src_w)
+    """Contain the whole source at zoom=1, including portrait and unusual aspect ratios."""
+    scale = min(OUT_W / src_w, OUT_H / src_h) * zoom
+    w = max(2, even_down(src_w * scale))
+    h = max(2, even_down(src_h * scale))
     return w, h
 
 

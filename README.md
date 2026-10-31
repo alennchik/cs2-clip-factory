@@ -65,8 +65,9 @@ Edit `config/streamers.yaml`. For each streamer:
 ## Automatic webcam detection (opt-in)
 
 Streamers sometimes move their webcam between broadcasts. When enabled, the render pipeline
-checks five frames from each **selected clip window** and only uses a split layout when
-OpenCV consistently finds a peripheral face in at least three frames. If the location is
+checks five frames from each **selected clip window** (including both ends) and only uses a split layout when
+OpenCV finds a single peripheral face in at least four frames, including the first and last.
+Multiple faces, incompatible sizes, and faces outside the final aspect-trimmed crop are rejected. If the location is
 unstable, no face is found, or OpenCV is missing, it uses the **full** layout instead
 of blindly cropping the old webcam position.
 
@@ -85,8 +86,9 @@ render:
 ```
 
 Keep the **previously validated** `webcam: {x, y, w, h}` coordinates where available.
-The detector reuses those dimensions when the camera moves. Streamers without a saved
-webcam can also be detected (with less reliable crop sizing). The YAML is never
+The detector uses those dimensions only when they are compatible with the estimates and
+the detected faces fit inside the final FFmpeg crop. This does **not** verify panel borders.
+Streamers without a saved webcam can also produce an unverified estimate. The YAML is never
 modified, and an explicitly requested `layout: full` remains full.
 
 Try a private local test before enabling it for the scheduler:
@@ -99,9 +101,15 @@ clipfactory render-file data/raw/keliencs_private_test.mp4 \
 
 Check the result visually. This is an **experimental face-based crop estimate**,
 not a trained webcam-boundary detector: it can fail when the streamer turns away,
-a game scene contains a face, a border moves, or a camera size changes. For these cases
-the safe fallback is full video, not a guessed crop. It also cannot follow a webcam
-that moves halfway through one clip.
+a game scene contains a face, a border moves, or a camera size changes. Detected uncertainty falls back to the full frame with zoom disabled. Some errors can still
+pass the heuristic gates: sparse sampling cannot see every scene change, and a stable game
+face can still be mistaken for a webcam. Every automatic result is marked for visual review
+in logs and Telegram; the decision and coordinates are stored in the SQLite event log.
+Do not enable this for unattended production based on synthetic tests alone.
+
+Use `--no-auto-webcam` to compare with your manual crop even when the config flag is enabled.
+The original manual mode and explicit `layout: full` bypass detection. See
+[the engineering audit](docs/ENGINEERING_AUDIT.md) for evidence and remaining limitations.
 
 ## Optional sponsor integration
 

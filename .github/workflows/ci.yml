@@ -8,6 +8,9 @@ on:
 jobs:
   test:
     runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        extras: [dev, "dev,vision"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -16,7 +19,7 @@ jobs:
       - name: Install ffmpeg
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
       - name: Install package
-        run: pip install -e ".[dev]"
+        run: pip install -e ".[${{ matrix.extras }}]"
       - name: Lint
         run: |
           ruff check .

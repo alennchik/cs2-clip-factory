@@ -58,25 +58,63 @@ def box_around_face(
     return NormBox(x=x, y=y, w=w, h=h)
 
 
+class FaceDetectionError(RuntimeError):
+    """Optional detector is unavailable or could not inspect a frame."""
+
+
+class FaceDetector:
+    """Load the optional cascade once per clip, returning *all* raw face boxes.
+
+    A face box is not a webcam boundary. Calibration may expand it as a manual
+    suggestion; automatic selection must also check ambiguity and the final crop.
+    """
+
+    def __init__(self) -> None:
+        try:
+            import cv2
+        except (ImportError, OSError) as exc:
+            raise FaceDetectionError("opencv_unavailable") from exc
+        self.cv2 = cv2
+        if not hasattr(cv2, "CascadeClassifier") or not hasattr(cv2, "data"):
+            raise FaceDetectionError("cascade_unavailable")
+        try:
+            self.cascade = cv2.CascadeClassifier(
+                cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
+            )
+            if self.cascade.empty():
+                raise FaceDetectionError("cascade_unavailable")
+        except cv2.error as exc:
+            raise FaceDetectionError("cascade_unavailable") from exc
+
+    def detect(self, image: Image.Image) -> list[NormBox]:
+        cv2 = self.cv2
+        w, h = image.size
+        try:
+            gray = cv2.cvtColor(np.asarray(image.convert("RGB")), cv2.COLOR_RGB2GRAY)
+            faces = self.cascade.detectMultiScale(
+                gray,
+                scaleFactor=1.1,
+                minNeighbors=6,
+                minSize=(max(24, w // 40), max(24, h // 40)),
+            )
+        except cv2.error as exc:
+            raise FaceDetectionError("detector_failed") from exc
+        return [
+            NormBox(x=float(x) / w, y=float(y) / h, w=float(fw) / w, h=float(fh) / h)
+            for x, y, fw, fh in faces
+        ]
+
+
 def suggest_webcam_box(image: Image.Image) -> NormBox | None:
     try:
-        import cv2
-    except ImportError:
+        faces = FaceDetector().detect(image)
+    except FaceDetectionError:
         return None
-    cascade_cls = getattr(cv2, "CascadeClassifier", None)
-    data = getattr(cv2, "data", None)
-    if cascade_cls is None or data is None:
-        return None  # OpenCV 5 dropped Haar cascades; the vision extra pins <5
-    cascade = cascade_cls(data.haarcascades + "haarcascade_frontalface_default.xml")
-    gray = cv2.cvtColor(np.asarray(image.convert("RGB")), cv2.COLOR_RGB2GRAY)
+    if not faces:
+        return None
+    face = max(faces, key=lambda f: f.w * f.h)
     w, h = image.size
-    faces = cascade.detectMultiScale(
-        gray, scaleFactor=1.1, minNeighbors=6, minSize=(max(24, w // 40), max(24, h // 40))
-    )
-    if len(faces) == 0:
-        return None
-    fx, fy, fw, fh = max(faces, key=lambda f: int(f[2]) * int(f[3]))
-    return box_around_face(float(fx), float(fy), float(fw), float(fh), w, h)
+    return box_around_face(face.x * w, face.y * h, face.w * w, face.h * h, w, h)
 
 
 def annotate(

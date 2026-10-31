@@ -113,7 +113,14 @@ class ReviewBot:
         return {"inline_keyboard": rows}
 
     def caption(self, render: sqlite3.Row, clip: sqlite3.Row) -> str:
-        lines = [
+        lines = []
+        if db.latest_event_detail(self.conn, "webcam_detection", render["id"]) is not None:
+            lines.append(
+                "⚠️ Автовебка: проверь кадрирование на всём ролике."
+                if render["layout"] == "split"
+                else "⚠️ Автовебка не подтверждена: сохранён полный кадр. Проверь ролик."
+            )
+        lines += [
             f"#{render['id']} · {clip['broadcaster_name']} · {clip['view_count']} просм. · "
             f"{float(render['duration']):.0f} с",
             f"Хук: {render['hook_text'] or '—'}",

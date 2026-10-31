@@ -88,3 +88,12 @@ def test_seam_and_middle_hook_position():
     assert hook_center_y("split", 1920, 1080, webcam_position="bottom") == 1150
     fg = full_foreground_box(1920, 1080)
     assert hook_center_y("full", 1920, 1080) == fg.y - 110
+
+
+@pytest.mark.parametrize("w,h", [(360, 800), (720, 1280), (2560, 1080), (640, 480)])
+def test_full_fit_preserves_unusual_aspect_ratio(w, h):
+    from clipfactory.layout import fit_size
+
+    fitted_w, fitted_h = fit_size(w, h)
+    assert fitted_w <= 1080 and fitted_h <= 1920
+    assert abs(fitted_w / fitted_h - w / h) < 0.01
